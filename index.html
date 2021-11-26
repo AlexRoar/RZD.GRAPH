@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-
+<html lang="ru">
 <head>
     <title>Быстрый старт. Размещение интерактивной карты на странице</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -9,14 +8,14 @@
 
     <script type="text/javascript">
         ymaps.ready(function () {
-            var myMap = new ymaps.Map('map', {
+            const myMap = new ymaps.Map('map', {
                 center: [55.751574, 37.573856],
                 zoom: 9,
                 controls: []
             });
 
             // Создание экземпляра маршрута.
-            var multiRoute = new ymaps.multiRouter.MultiRoute({
+            const multiRoute = new ymaps.multiRouter.MultiRoute({
                 // Точки маршрута.
                 // Обязательное поле.
                 referencePoints: [

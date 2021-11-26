@@ -1,0 +1,11 @@
+{
+  "name": "RZD",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/AlexRoar/RZD.GRAPH.git",
+  "author": "Aleksandr Dremov <dremov.me@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "yapi": "https://api-maps.yandex.ru/2.1/?apikey=b388176b-133f-4684-825f-155e1931b7b3&lang=ru_RU"
+  }
+}
