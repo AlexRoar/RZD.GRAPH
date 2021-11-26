@@ -1,6 +1,6 @@
 import ymaps from "yandex-maps";
 import {
-    WayPoint
+    WayPoint,
     GeoLocation,
     PossibleRoutes,
     RequestParams,
