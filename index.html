@@ -5,51 +5,11 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <script src="https://api-maps.yandex.ru/2.1/?apikey=b388176b-133f-4684-825f-155e1931b7b3&lang=ru_RU" type="text/javascript">
     </script>
-
-    <script type="text/javascript">
-        ymaps.ready(function () {
-            const myMap = new ymaps.Map('map', {
-                center: [55.751574, 37.573856],
-                zoom: 9,
-                controls: []
-            });
-
-            // Создание экземпляра маршрута.
-            const multiRoute = new ymaps.multiRouter.MultiRoute({
-                // Точки маршрута.
-                // Обязательное поле.
-                referencePoints: [
-                    'Москва, метро Смоленская',
-                    'Москва, метро Арбатская',
-                    [55.734876, 37.59308], // улица Льва Толстого.
-                ]
-            }, {
-                // Автоматически устанавливать границы карты так,
-                // чтобы маршрут был виден целиком.
-                boundsAutoApply: true
-            });
-            multiRoute.model.events.add('requestsuccess', function() {
-                // Получение ссылки на активный маршрут.
-                var activeRoute = multiRoute.getActiveRoute();
-                // Вывод информации о маршруте.
-                console.log("Длина: " + activeRoute.properties.get("distance").text);
-                console.log("Время прохождения: " + activeRoute.properties.get("duration").text);
-                // Для автомобильных маршрутов можно вывести
-                // информацию о перекрытых участках.
-                if (activeRoute.properties.get("blocked")) {
-                    console.log("На маsdршруте имеdfsdasdются участки с перекрытыми дорогами.");
-                }
-            });
-
-            // Добавление маршрута на карту.
-            myMap.geoObjects.add(multiRoute);
-        });
-    </script>
+    <script   src="https://code.jquery.com/jquery-3.6.0.min.js"   integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="   crossorigin="anonymous"></script>
 </head>
 
 <body>
 <meta charset="utf-8">
-<div id="map" style="width:450px;height:300px"></div>
 
 </body>
 
