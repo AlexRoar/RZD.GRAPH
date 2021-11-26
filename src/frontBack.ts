@@ -1,3 +1,5 @@
+import ymaps from "yandex-maps";
+
 interface WayPoint {
     name: string
 }
@@ -92,7 +94,26 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): YAPIRou
  * @param range in degrees
  */
 function getStations(userPoint: GeoLocation, range: number): YAPI /* TODO */ {
+    const searchControl = new ymaps.control.SearchControl({
+        options: {
+            provider: 'yandex#search',
+            boundedBy: [[55.918502, 37.517399], [55.937514, 37.533705]]
+        }
+    });
 
+    myMap.controls.add(searchControl);
+
+    // Программно выполним поиск определённых кафе в текущей
+    // прямоугольной области карты.
+
+
+    searchControl.search('станция').then(function () {
+        var geoObjectsArray = searchControl.getResultsArray();
+        if (geoObjectsArray.length) {
+            // Выводит свойство name первого геообъекта из результатов запроса.
+            console.log(geoObjectsArray);
+        }
+    });
 }
 
 /**
