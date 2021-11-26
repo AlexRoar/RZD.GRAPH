@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Быстрый старт. Размещение интерактивной карты на странице</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=b388176b-133f-4684-825f-155e1931b7b3&lang=ru_RU" type="text/javascript">
+    </script>
+
+    <script type="text/javascript">
+        ymaps.ready(function () {
+            var myMap = new ymaps.Map('map', {
+                center: [55.751574, 37.573856],
+                zoom: 9,
+                controls: []
+            });
+
+            // Создание экземпляра маршрута.
+            var multiRoute = new ymaps.multiRouter.MultiRoute({
+                // Точки маршрута.
+                // Обязательное поле.
+                referencePoints: [
+                    'Москва, метро Смоленская',
+                    'Москва, метро Арбатская',
+                    [55.734876, 37.59308], // улица Льва Толстого.
+                ]
+            }, {
+                // Автоматически устанавливать границы карты так,
+                // чтобы маршрут был виден целиком.
+                boundsAutoApply: true
+            });
+
+
+            // Добавление маршрута на карту.
+            myMap.geoObjects.add(multiRoute);
+        });
+    </script>
+</head>
+
+<body>
+<meta charset="utf-8">
+<div id="map" style="width:450px;height:300px"></div>
+
+</body>
+
+</html>
