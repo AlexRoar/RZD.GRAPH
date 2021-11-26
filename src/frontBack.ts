@@ -47,6 +47,6 @@ interface PossibleRoutes {
     others: MultiRoute[]
 }
 
-function getRoute(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
-    return {};
+function getRoute(waypoints: WayPoint[], params: RequestParams): void {
+
 }
