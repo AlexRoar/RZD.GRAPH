@@ -3,7 +3,7 @@
 <head>
     <title>Быстрый старт. Размещение интерактивной карты на странице</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <script src="https://api-maps.yandex.ru/2.1/?apikey=60445215-6d3a-4f88-87fe-8d52b72e5bc9&lang=ru_RU" type="text/javascript">
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=b388176b-133f-4684-825f-155e1931b7b3&lang=ru_RU" type="text/javascript">
     </script>
 
     <script type="text/javascript">
@@ -28,7 +28,18 @@
                 // чтобы маршрут был виден целиком.
                 boundsAutoApply: true
             });
-
+            multiRoute.model.events.add('requestsuccess', function() {
+                // Получение ссылки на активный маршрут.
+                var activeRoute = multiRoute.getActiveRoute();
+                // Вывод информации о маршруте.
+                console.log("Длина: " + activeRoute.properties.get("distance").text);
+                console.log("Время прохождения: " + activeRoute.properties.get("duration").text);
+                // Для автомобильных маршрутов можно вывести
+                // информацию о перекрытых участках.
+                if (activeRoute.properties.get("blocked")) {
+                    console.log("На маsdршруте имеdfsdasdются участки с перекрытыми дорогами.");
+                }
+            });
 
             // Добавление маршрута на карту.
             myMap.geoObjects.add(multiRoute);

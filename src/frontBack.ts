@@ -1,4 +1,4 @@
-import ymaps from "yandex-maps";
+import ymaps, {driving, masstransit} from "yandex-maps";
 
 interface WayPoint {
     name: string
@@ -11,9 +11,9 @@ interface GeoLocation {
 
 enum TransportType {
     train,
-    publicTransport,
-    car,
-    pedestrian
+    publicTransport = "masstransit",
+    car = "auto",
+    pedestrian = "pedestrian"
 }
 
 interface RequestParams {
@@ -66,26 +66,22 @@ class PossibleRoutes {
     }
 }
 
-interface YAPIDrivingRoute {
-
-}
-
-interface YAPIPedestrianRoute {
-
-}
-
-interface YAPIMassTransitRoute {
-
-}
-
-type YAPIRoute = YAPIDrivingRoute | YAPIPedestrianRoute | YAPIMassTransitRoute
-
 function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
 
 }
 
+type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit.Route | object
+
 function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): YAPIRoute[] {
-    return []
+    return [TransportType.car, TransportType.publicTransport, TransportType.pedestrian]
+        .filter(value => !params.exclusions.has(value))
+        .map(() => new ymaps.multiRouter.MultiRoute({
+                referencePoints: waypoints.map(value => value.name),
+                params: {
+                    results: 1
+                }
+            })
+        );
 }
 
 /**
