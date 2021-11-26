@@ -61,7 +61,17 @@ interface PossibleRoutes {
     others: MultiRoute[]
 }
 
-function getRoute(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
+interface YAPIMultiroute {
+    
+}
+
+function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
 
 }
+
+function getYAMultiRoutes(waypoints: WayPoint[]): YAPIMultiroute {
+
+}
+
 ```
+

@@ -2,6 +2,11 @@ interface WayPoint {
     name: string
 }
 
+interface GeoLocation {
+    lat: number,
+    lon: number
+}
+
 enum TransportType {
     train,
     publicTransport,
@@ -14,13 +19,21 @@ interface RequestParams {
     exclusions: Set<TransportType>
 }
 
-interface MultiRoute {
-    duration: number
-    distance: number
-    price: number
-    hiddenPrice: number
+class MultiRoute {
+    duration: number = 0
+    distance: number = 0
+    price: number = 0
+    hiddenPrice: number = 0
 
-    path: Route[]
+    path: Route[] = []
+
+    constructor() {
+
+    }
+
+    private calcParameters() {
+
+    }
 }
 
 interface RoutePoint {
@@ -39,14 +52,56 @@ interface Route {
     info: object
 }
 
-interface PossibleRoutes {
-    fast: MultiRoute
-    cheap: MultiRoute
-    best: MultiRoute
+class PossibleRoutes {
+    fast?: MultiRoute
+    cheap?: MultiRoute
+    best?: MultiRoute
 
-    others: MultiRoute[]
+    others: MultiRoute[] = []
+
+    constructor(allRoutes: MultiRoute[]) {
+
+    }
 }
 
-function getRoute(waypoints: WayPoint[], params: RequestParams): void {
+interface YAPIDrivingRoute {
 
 }
+
+interface YAPIPedestrianRoute {
+
+}
+
+interface YAPIMassTransitRoute {
+
+}
+
+type YAPIRoute = YAPIDrivingRoute | YAPIPedestrianRoute | YAPIMassTransitRoute
+
+function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
+
+}
+
+function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): YAPIRoute[] {
+    return []
+}
+
+/**
+ *
+ * @param userPoint user's location
+ * @param range in degrees
+ */
+function getStations(userPoint: GeoLocation, range: number): YAPI /* TODO */ {
+
+}
+
+/**
+ *
+ * @param firstStation
+ * @param secondStation
+ * @param date
+ */
+function getSchedule(firstStation: string, secondStation: string, date: Date): TrainSchedule[] /* TODO */ {
+
+}
+
