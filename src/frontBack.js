@@ -56,15 +56,15 @@ class MultiRoute {
     }
     async expandWays() {
         let expanded = await this.expandSpecialPoints();
-        for (let i = 0; i < this.path.length; i++) {
-            for (let j = i; j < this.path.length; j++) {
-                let firstPart = await getAutoRoute([this.path[i].startPoint.coordinates, this.path[j].endPoint.coordinates]);
-                if (firstPart === null)
-                    continue;
-                const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1));
-                expanded.push(new MultiRoute(pathFinal));
-            }
-        }
+        // for (let i = 0; i < this.path.length; i++) {
+        //     for (let j = i; j < this.path.length; j++) {
+        //         let firstPart = await getAutoRoute([this.path[i].startPoint.coordinates, this.path[j].endPoint.coordinates])
+        //         if (firstPart === null)
+        //             continue
+        //         const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
+        //         expanded.push(new MultiRoute(pathFinal))
+        //     }
+        // }
         return expanded;
     }
 }
@@ -151,23 +151,23 @@ class PossibleRoutes {
     }
 }
 const specialPoints = [
-// [55.805913, 94.329253], // Уяр
-// [55.545684, 94.702848], // Саянская
+    [55.805913, 94.329253],
+    [55.545684, 94.702848], // Саянская
 ];
 function getDistance(segment) {
     // @ts-ignore
-    return Math.floor(segment.properties.get('distance', {
+    return segment.properties.get('distance', {
         text: "1 км",
         value: 1000
-    }).value / 1000);
+    }).value / 1000;
 }
 function getDuration(segment) {
     // @ts-ignore
-    return Math.floor(segment.properties.get('duration', {
+    return segment.properties.get('duration', {
         text: "30 мин",
         value: 60
         // @ts-ignore
-    }).value / 60);
+    }).value / 60;
 }
 function getAddress(coords) {
     return new Promise((resolve, reject) => {
@@ -223,12 +223,14 @@ async function YAPIRouteToMultiDriving(route) {
     const path = model.getPaths()[0];
     const segments = path.getSegments();
     const bounds = await getBounds(segments, path);
-    const routes = segments.map((segment, index) => new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.publicTransport));
+    const routes = segments.map((segment, index) => new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.car));
     return new MultiRoute(routes);
 }
 async function getRoutes(waypoints, params) {
     let YaRoutes = await getYAMultiRoutes(waypoints, params);
     const mRoutes = await Promise.all(YaRoutes.map((it, index) => {
+        if (it === null)
+            return null;
         if (YaRoutes.length >= 2) {
             if (index == 0) {
                 // @ts-ignore
@@ -245,7 +247,7 @@ async function getRoutes(waypoints, params) {
         // @ts-ignore
         return YAPIRouteToMultiDriving(it);
     }));
-    return new PossibleRoutes(mRoutes);
+    return new PossibleRoutes(mRoutes.filter((a) => a !== null));
 }
 function getYAMultiRoutes(waypoints, params) {
     return Promise.all([TransportType.car, TransportType.publicTransport]

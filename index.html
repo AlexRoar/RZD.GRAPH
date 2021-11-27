@@ -77,32 +77,38 @@
         function activateRoute(route, tab) {
             $(".tabbed-big").removeClass("result-tab-selected")
 
-            let priceUp = activeRoute.car.price - route.price
-            let timeUp = activeRoute.car.duration - route.duration
+            if (activeRoute.car) {
+                let priceUp = activeRoute.car.price - route.price
+                let timeUp = activeRoute.car.duration - route.duration
 
-            if (priceUp > 0) {
-                $('#price-better').html(
-                    ("<p><span class=\"accent\">{0}</span> {1}</p>" +
-                        "<p>Экономия за поездку</p>").format(
-                        Math.round(priceUp),
-                        "рублей"
-                    ))
+                if (priceUp > 0) {
+                    $('#price-better').show().html(
+                        ("<p><span class=\"accent\">{0}</span> {1}</p>" +
+                            "<p>Экономия за поездку</p>").format(
+                            Math.round(priceUp),
+                            "рублей"
+                        ))
+                } else {
+                    $('#price-better').show().html(
+                        "<p>Похоже, авто маршрут выгоднее</p>")
+                }
+
+                if (timeUp > 0) {
+                    $('#time-better').show().html(
+                        ("<p><span class=\"accent\">{0}</span> {1}</p>" +
+                            "<p>Быстрее,чем просто авто</p>").format(
+                            Math.round(timeUp),
+                            "минут"
+                        ))
+                } else {
+                    $('#time-better').show().html(
+                        "<p>Кажется, на авто быстрее</p>")
+                }
             } else {
-                $('#price-better').html(
-                    "<p>Похоже, авто маршрут выгоднее</p>")
+                $('#time-better').hide()
+                $('#price-better').hide()
             }
 
-            if (timeUp > 0) {
-                $('#time-better').html(
-                    ("<p><span class=\"accent\">{0}</span> {1}</p>" +
-                        "<p>Быстрее,чем просто авто</p>").format(
-                        Math.round(timeUp),
-                        "минут"
-                    ))
-            } else {
-                $('#time-better').html(
-                    "<p>Кажется, на авто быстрее</p>")
-            }
 
             let pathDetails = ""
             for (const routeElem of route.path) {
@@ -177,33 +183,33 @@
                 datetime: new Date()
             })
 
-            console.log(activeRoute)
+            activeRoute.build().then(() => {
+                console.log(activeRoute)
+                $('#all-quick-results').html('')
+                let res = ""
 
+                if (activeRoute.best)
+                    res += quickRouteInfo(activeRoute.best,
+                        "optimal-tab",
+                        "Оптимальный",
+                        "activeRoute.best")
 
-            $('#all-quick-results').html('')
-            let res = ""
+                if (activeRoute.fast)
+                    res += quickRouteInfo(activeRoute.fast,
+                        "fast-tab",
+                        "Самый быстрый",
+                        "activeRoute.fast")
 
-            if (activeRoute.best)
-                res += quickRouteInfo(activeRoute.best,
-                    "optimal-tab",
-                    "Оптимальный",
-                    "activeRoute.best")
+                if (activeRoute.cheap)
+                    res += quickRouteInfo(activeRoute.cheap,
+                        "cheap-tab",
+                        "Самый дешевый",
+                        "activeRoute.cheap")
 
-            if (activeRoute.fast)
-                res += quickRouteInfo(activeRoute.fast,
-                    "fast-tab",
-                    "Самый быстрый",
-                    "activeRoute.fast")
+                $('#all-quick-results').html(res)
 
-            if (activeRoute.cheap)
-                res += quickRouteInfo(activeRoute.cheap,
-                    "cheap-tab",
-                    "Самый дешевый",
-                    "activeRoute.cheap")
-
-            $('#all-quick-results').html(res)
-
-            activateRoute(activeRoute.best, '.optimal-tab')
+                activateRoute(activeRoute.best, '.optimal-tab')
+            })
         }
     </script>
     <meta charset="utf-8">

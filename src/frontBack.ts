@@ -78,15 +78,15 @@ class MultiRoute {
     async expandWays(): Promise<MultiRoute[]> {
         let expanded = await this.expandSpecialPoints()
 
-        for (let i = 0; i < this.path.length; i++) {
-            for (let j = i; j < this.path.length; j++) {
-                let firstPart = await getAutoRoute([this.path[i].startPoint.coordinates, this.path[j].endPoint.coordinates])
-                if (firstPart === null)
-                    continue
-                const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
-                expanded.push(new MultiRoute(pathFinal))
-            }
-        }
+        // for (let i = 0; i < this.path.length; i++) {
+        //     for (let j = i; j < this.path.length; j++) {
+        //         let firstPart = await getAutoRoute([this.path[i].startPoint.coordinates, this.path[j].endPoint.coordinates])
+        //         if (firstPart === null)
+        //             continue
+        //         const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
+        //         expanded.push(new MultiRoute(pathFinal))
+        //     }
+        // }
         return expanded
     }
 }
@@ -235,25 +235,25 @@ type SegmentModel =
 
 
 const specialPoints: GeoLocation[] = [
-    // [55.805913, 94.329253], // Уяр
-    // [55.545684, 94.702848], // Саянская
+    [55.805913, 94.329253], // Уяр
+    [55.545684, 94.702848], // Саянская
 ];
 
 function getDistance(segment: SegmentModel): number {
     // @ts-ignore
-    return Math.floor(segment.properties.get('distance', {
+    return segment.properties.get('distance', {
         text: "1 км",
         value: 1000
-    }).value / 1000);
+    }).value / 1000;
 }
 
 function getDuration(segment: SegmentModel): number {
     // @ts-ignore
-    return Math.floor(segment.properties.get('duration', {
+    return segment.properties.get('duration', {
         text: "30 мин",
         value: 60
         // @ts-ignore
-    }).value / 60);
+    }).value / 60;
 }
 
 function getAddress(coords: number[]): Promise<string> {
@@ -324,6 +324,8 @@ async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): 
 async function getRoutes(waypoints: WayPoint[], params: RequestParams): Promise<PossibleRoutes> {
     let YaRoutes = await getYAMultiRoutes(waypoints, params);
     const mRoutes = await Promise.all(YaRoutes.map((it, index) => {
+        if ( it === null)
+            return null
         if (YaRoutes.length >= 2) {
             if (index == 0) {
                 // @ts-ignore
@@ -338,7 +340,7 @@ async function getRoutes(waypoints: WayPoint[], params: RequestParams): Promise<
         // @ts-ignore
         return YAPIRouteToMultiDriving(it);
     }));
-    return new PossibleRoutes(mRoutes);
+    return new PossibleRoutes(mRoutes.filter((a) => a !== null) as MultiRoute[]);
 
 }
 
