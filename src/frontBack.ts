@@ -244,7 +244,6 @@ function getDistance(segment: SegmentModel): number {
     return Math.floor(segment.properties.get('distance', {
         text: "1 км",
         value: 1000
-        // @ts-ignore
     }).value / 1000);
 }
 
@@ -360,12 +359,14 @@ function getAutoRoute(points: GeoLocation[]): Promise<Route[] | null> {
             routingMode: TransportType.car
         },
     });
-    return new Promise((resolve: (_: (Route | null)[]) => void, reject) => {
+    return new Promise( (resolve: (_: Route[] | null) => void, reject) => {
         multiRoute.model.events.add('requestsuccess', function () {
             let route = multiRoute.getActiveRoute()
             if (!route)
-                resolve(route)
-            resolve(YAPIRouteToMultiRoute(route!));
+                resolve(null)
+            YAPIRouteToMultiDriving(route as ymaps.multiRouter.driving.Route).then((value) => {
+                resolve(value.path)
+            })
         })
     });
 }
