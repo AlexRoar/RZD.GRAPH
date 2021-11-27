@@ -98,7 +98,7 @@ class Route {
             case TransportType.car: {
                 this.price += this.distance * this.rates.simpleCar
                 this.price += this.duration * this.rates.driver / 60
-
+                break
             }
             case TransportType.publicTransport:
             case TransportType.pedestrian: {
@@ -112,6 +112,7 @@ class PossibleRoutes {
     public fast?: MultiRoute
     public cheap?: MultiRoute
     public best?: MultiRoute
+    public car?: MultiRoute
 
     public others: MultiRoute[] = []
 
@@ -128,6 +129,10 @@ class PossibleRoutes {
         allRoutes = allRoutes.sort((a, b) => a.path.length - b.path.length)
         this.others = allRoutes
         this.best = allRoutes[0]
+
+        let carOnly = allRoutes.filter((a) => a.countType(TransportType.car) == a.path.length)
+        if(carOnly.length)
+            this.car = carOnly[0]
     }
 }
 
@@ -152,26 +157,6 @@ interface YAPIPedestrianRoute {
 
 type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit.Route | YAPIPedestrianRoute
 
-function YAPIRouteToMultiRoute(route: YAPIRoute): MultiRoute {
-    // @ts-ignore
-    let model: ymaps.multiRouter.driving.RouteModel = route.model
-    model.getPaths().flatMap(path => path.getSegments()).map(segment => new Route(Math.floor(segment.properties.get('duration', {
-            text: "30 мин",
-            value: 60 * 30
-            // @ts-ignore
-        }).value / 60),
-        new Route(Math.floor(segment.properties.get('distance', {
-            text: "1 км",
-            value: 1000
-            // @ts-ignore
-        }).value / 1000)), {coordinates: {lat: path.}}
-    ))
-    return new MultiRoute(Math.floor(route.properties.get('duration', {
-        text: "30 мин",
-        value: 60 * 30
-        // @ts-ignore
-    }).value / 60), Math.floor(route.properties.get('distance', {text: "1 км", value: 1000}).value / 1000), []);
-}
 
 function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
     let YaRoutes = getYAMultiRoutes(waypoints, params);
@@ -243,7 +228,7 @@ const mockData: PossibleRoutes = new PossibleRoutes([
             }, {
                 duration: 115
             }, TransportType.pedestrian),
-        new Route(210, 0,
+        new Route(170, 0,
             {
                 name: "Саянская",
                 coordinates: {
@@ -255,8 +240,9 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                     lat: 0, lon: 0
                 }
             }, {
-                duration: 210
-            }, TransportType.pedestrian),
+                duration: 170,
+                description: "Электричка А — Б"
+            }, TransportType.publicTransport),
         new Route(17, 0,
             {
                 name: "Железнодорожный вокзал",
@@ -303,7 +289,7 @@ const mockData: PossibleRoutes = new PossibleRoutes([
             }, {
                 duration: 115
             }, TransportType.pedestrian),
-        new Route(210, 0,
+        new Route(170, 0,
             {
                 name: "Саянская",
                 coordinates: {
@@ -315,7 +301,7 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                     lat: 0, lon: 0
                 }
             }, {
-                duration: 210
+                duration: 170
             }, TransportType.publicTransport),
         new Route(17, 0,
             {

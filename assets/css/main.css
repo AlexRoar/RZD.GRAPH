@@ -387,3 +387,37 @@ div.results-wrap-map {
 .tabbed-cell-helper i {
     padding: 3px;
 }
+
+.fast-number {
+    margin-top: 20px;
+}
+
+.fast-number p:first-child {
+    font-family: Montserrat, serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 24px;
+    line-height: 29px;
+    align-items: center;
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
+
+.fast-number p:last-child {
+    font-family: Montserrat, serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 17px;
+    /* identical to box height */
+
+    align-items: center;
+    text-align: center;
+    text-transform: uppercase;
+
+    /* GrayDarker */
+
+    color: #868686;
+    margin-bottom: 0;
+}

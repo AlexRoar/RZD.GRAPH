@@ -23,6 +23,7 @@
             };
         }
 
+        let myMap
         const carIcon = "<i class=\"fas fa-car\"></i>"
         const busIcon = "<i class=\"fas fa-bus\"></i>"
         const pedestrianIcon = "<i class=\"fas fa-walking\"></i>"
@@ -48,7 +49,7 @@
             "                                </div>\n" +
             "                            </div>"
 
-        const quickInfoTemplate = "<div onclick=\"activateRoute({6}, '{0}')\" class=\"results-wrap-small-tabbed tabbed-big {0}\">\n" +
+        const quickInfoTemplate = "<div onclick=\"activateRoute({6}, '.{0}')\" class=\"results-wrap-small-tabbed tabbed-big {0}\">\n" +
             "                                <div class=\"tabbed-cell results-wrap-small-tabbed\">\n" +
             "                                    <p>{1}</p>\n" +
             "                                </div>\n" +
@@ -74,9 +75,34 @@
     <script src="src/frontBack.js"></script>
     <script>
         function activateRoute(route, tab) {
-            console.log(route)
-
             $(".tabbed-big").removeClass("result-tab-selected")
+
+            let priceUp = activeRoute.car.price - route.price
+            let timeUp = activeRoute.car.duration - route.duration
+
+            if (priceUp > 0) {
+                $('#price-better').html(
+                    "<p><span class=\"accent\">{0}</span> {1}</p>" +
+                    "<p>Экономия за поездку</p>".format(
+                        Math.round(priceUp),
+                        "рублей"
+                    ))
+            } else {
+                $('#price-better').html(
+                    "<p>Похоже, авто маршрут выгоднее</p>")
+            }
+
+            if (timeUp > 0) {
+                $('#time-better').html(
+                    "<p><span class=\"accent\">{0}</span> {1}</p>" +
+                    "<p>Быстрее чем просто авто</p>".format(
+                        Math.round(timeUp),
+                        "минут"
+                    ))
+            } else {
+                $('#time-better').html(
+                    "<p>Кажется, на авто дешевле</p>")
+            }
 
             let pathDetails = ""
             for (const routeElem of route.path) {
@@ -123,7 +149,6 @@
                         iconsLine += pedestrianIcon
                         break;
                 }
-                console.log(segment, route.path.length)
                 if (parseInt(segment) + 1 !== route.path.length)
                     iconsLine += chevron
             }
@@ -168,7 +193,6 @@
                     "activeRoute.cheap")
 
             $('#all-quick-results').html(res)
-
 
             activateRoute(activeRoute.best, '.optimal-tab')
         }
@@ -231,9 +255,9 @@
                         </div>
                         <script>
                             ymaps.ready(() => {
-                                var myMap = new ymaps.Map('map', {
-                                    center: [55.74, 37.58],
-                                    zoom: 13,
+                                myMap = new ymaps.Map('map', {
+                                    center: [56.0153, 92.8932],
+                                    zoom: 10,
                                     controls: []
                                 });
                             })
@@ -241,25 +265,14 @@
                     </div>
                     <div class="col-6 col-md-5">
                         <div id="all-quick-results" class="results-wrap">
-
-                            <div onclick="activateRoute(activeRoute.cheap, '.cheap-tab')"
-                                 class="results-wrap-small-tabbed tabbed-big cheap-tab">
-                                <div class="tabbed-cell results-wrap-small-tabbed">
-                                    <p>Cамый дешевый</p>
-                                </div>
-                                <div class="tabbed-cell-helper">
-
-                                </div>
-                            </div>
-                            <div onclick="activateRoute(activeRoute.fast, '.fast-tab')"
-                                 class="results-wrap-small-tabbed tabbed-big fast-tab">
-                                <div class="tabbed-cell results-wrap-small-tabbed">
-                                    <p>Cамый быстрый</p>
-                                </div>
-                                <div class="tabbed-cell-helper">
-
-                                </div>
-                            </div>
+                        </div>
+                        <div id="price-better" class="results-wrap fast-number">
+                            <p><span class="accent">430</span> рублей</p>
+                            <p>Экономия за поездку</p>
+                        </div>
+                        <div id="time-better" class="results-wrap fast-number">
+                            <p><span class="accent">38</span> минут</p>
+                            <p>Быстрее, чем только авто</p>
                         </div>
                     </div>
                 </div>
