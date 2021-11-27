@@ -1,4 +1,5 @@
 import type ymaps from "yandex-maps";
+import {IDataManager} from "yandex-maps";
 
 interface WayPoint {
     name: string
@@ -57,7 +58,7 @@ class MultiRoute {
 }
 
 interface RoutePoint {
-    coordinates: { lat: number, lon: number }
+    coordinates: number[]
     name: string
 }
 
@@ -175,6 +176,44 @@ interface YAPIPedestrianRoute {
 
 type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit.Route | YAPIPedestrianRoute
 
+type SegmentModel =
+    ymaps.multiRouter.masstransit.TransferSegmentModel
+    | ymaps.multiRouter.masstransit.TransportSegmentModel
+    | ymaps.multiRouter.masstransit.WalkSegmentModel
+
+function getDistance(segment: SegmentModel): number {
+    return Math.floor(segment.properties.get('distance', {
+        text: "1 км",
+        value: 1000
+        // @ts-ignore
+    }).value / 1000);
+}
+
+function getDuration(segment: SegmentModel): number {
+    return Math.floor(segment.properties.get('duration', {
+        text: "30 мин",
+        value: 60
+        // @ts-ignore
+    }).value / 60);
+}
+
+function getBounds(segments: SegmentModel[], path: ymaps.multiRouter.masstransit.PathModel): RoutePoint[][] {
+    const coords: Number[][] = path.properties.get("coordinates", []) as Number[][];
+    const result: RoutePoint[][] = [];
+    // @ts-ignore
+    const prev = coords[segments[0].properties.get("lodIndex", 0)];
+    for (const segment of segments.slice(1)) {
+        result.push([{coordinates: prev, name: ymaps.geocode()},])
+    }
+}
+
+function YAPIRouteToMultiRoute(route: ymaps.multiRouter.masstransit.Route): MultiRoute {
+    let model: ymaps.multiRouter.masstransit.RouteModel = route.model
+    const path = model.getPaths()[0];
+    const segments = path.getSegments();
+    const bounds = getBounds(segments, path);
+    segments.map(segment => new Route(getDuration(segment), getDistance(segment),);
+}
 
 function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
     let YaRoutes = getYAMultiRoutes(waypoints, params);
@@ -183,11 +222,6 @@ function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes
 }
 
 function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise<YAPIRoute[]> {
-    let myMap = new ymaps.Map('map', {
-        center: [55.751574, 37.573856],
-        zoom: 9,
-        controls: []
-    });
     return Promise.all([TransportType.car, TransportType.publicTransport, TransportType.pedestrian]
         .filter(value => !params.exclusions.has(value))
         .map((value): Promise<YAPIRoute> => {
@@ -202,14 +236,11 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise
                     routingMode: value
                 },
             });
-            const result = new Promise((resolve: (_: YAPIRoute) => void, reject) => {
+            return new Promise((resolve: (_: YAPIRoute) => void, reject) => {
                 multiRoute.model.events.add('requestsuccess', function () {
                     resolve(multiRoute.getActiveRoute()!);
                 })
             });
-
-            myMap.geoObjects.add(multiRoute);
-            return result;
         }));
 }
 

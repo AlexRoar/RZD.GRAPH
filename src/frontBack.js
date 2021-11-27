@@ -106,16 +106,41 @@ class PossibleRoutes {
             this.car = carOnly[0];
     }
 }
+function getDistance(segment) {
+    return Math.floor(segment.properties.get('distance', {
+        text: "1 км",
+        value: 1000
+        // @ts-ignore
+    }).value / 1000);
+}
+function getDuration(segment) {
+    return Math.floor(segment.properties.get('duration', {
+        text: "30 мин",
+        value: 60
+        // @ts-ignore
+    }).value / 60);
+}
+function getBounds(segments, path) {
+    const coords = path.properties.get("coordinates", []);
+    const result = [];
+    // @ts-ignore
+    const prev = coords[segments[0].properties.get("lodIndex", 0)];
+    for (const segment of segments.slice(1)) {
+        result.push([{ coordinates: prev, name: ymaps.geocode() },]);
+    }
+}
+function YAPIRouteToMultiRoute(route) {
+    let model = route.model;
+    const path = model.getPaths()[0];
+    const segments = path.getSegments();
+    const bounds = getBounds(segments, path);
+    segments.map(segment => new Route(getDuration(segment), getDistance(segment)));
+}
 function getRoutes(waypoints, params) {
     let YaRoutes = getYAMultiRoutes(waypoints, params);
     return new PossibleRoutes([]);
 }
 function getYAMultiRoutes(waypoints, params) {
-    let myMap = new ymaps.Map('map', {
-        center: [55.751574, 37.573856],
-        zoom: 9,
-        controls: []
-    });
     return Promise.all([TransportType.car, TransportType.publicTransport, TransportType.pedestrian]
         .filter(value => !params.exclusions.has(value))
         .map((value) => {
@@ -130,13 +155,11 @@ function getYAMultiRoutes(waypoints, params) {
                 routingMode: value
             },
         });
-        const result = new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             multiRoute.model.events.add('requestsuccess', function () {
                 resolve(multiRoute.getActiveRoute());
             });
         });
-        myMap.geoObjects.add(multiRoute);
-        return result;
     }));
 }
 const mockData = new PossibleRoutes([
