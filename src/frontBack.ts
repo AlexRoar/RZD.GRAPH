@@ -278,13 +278,27 @@ async function getBounds(segments: SegmentModel[], path: ymaps.multiRouter.masst
     for (const segment of segments.slice(1)) {
         // @ts-ignore
         const cur = coords[segment.properties.get("lodIndex", coords.length - 1)];
-        result.push([{
-            coordinates: prev.map(it => it.valueOf()),
-            name: await getAddress(prev.map(it => it.valueOf()))
-        }, {
-            coordinates: cur.map(it => it.valueOf()),
-            name: await getAddress(cur.map(it => it.valueOf()))
-        }]);
+
+        if (segment.properties.get("type", "driving") === "driving") {
+            result.push([{
+                coordinates: prev.map(it => it.valueOf()),
+                // @ts-ignore
+                name: segment.properties.get("text", "")
+            }, {
+                coordinates: cur.map(it => it.valueOf()),
+                // @ts-ignore
+                name: segment.properties.get("text", "")
+            }]);
+        } else {
+            result.push([{
+                coordinates: prev.map(it => it.valueOf()),
+                name: await getAddress(prev.map(it => it.valueOf()))
+            }, {
+                coordinates: cur.map(it => it.valueOf()),
+                name: await getAddress(cur.map(it => it.valueOf()))
+            }];
+        }
+
         prev = cur;
     }
     const last = coords[coords.length - 1];
@@ -328,7 +342,7 @@ async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): 
 async function getRoutes(waypoints: WayPoint[], params: RequestParams): Promise<PossibleRoutes> {
     let YaRoutes = await getYAMultiRoutes(waypoints, params);
     const mRoutes = await Promise.all(YaRoutes.map((it, index) => {
-        if ( it === null)
+        if (it === null)
             return null
         if (YaRoutes.length >= 2) {
             if (index == 0) {
@@ -380,7 +394,7 @@ function getAutoRoute(points: GeoLocation[]): Promise<Route[] | null> {
             routingMode: TransportType.car
         },
     });
-    return new Promise( (resolve: (_: Route[] | null) => void, reject) => {
+    return new Promise((resolve: (_: Route[] | null) => void, reject) => {
         multiRoute.model.events.add('requestsuccess', function () {
             let route = multiRoute.getActiveRoute()
             if (!route) {
@@ -489,6 +503,8 @@ ymaps.ready(() => {
                 }, TransportType.publicTransport)
         ])
     ])
-    mockData.build().then(r => {console.log("Builded mock")});
+    mockData.build().then(r => {
+        console.log("Builded mock")
+    });
 })
 
