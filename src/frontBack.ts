@@ -5,6 +5,8 @@ interface WayPoint {
     name: string
 }
 
+let DATE = new Date();
+
 type GeoLocation = number[]
 
 enum TransportType {
@@ -41,7 +43,6 @@ class MultiRoute {
 
         console.log("New calc")
         for (const routePart of this.path) {
-            console.log(routePart)
             this.price += routePart.price
             this.duration += routePart.duration
             this.distance += routePart.distance
@@ -56,39 +57,82 @@ class MultiRoute {
     }
 
     async expandSpecialPoints(): Promise<MultiRoute[]> {
+        if (this.isCar)
+            return [];
+
         let special: MultiRoute[] = []
 
         for (const specialPoint of specialPoints) {
-            for (let i = 0; i < this.path.length; i++) {
-                for (let j = i; j < this.path.length; j++) {
-                    let firstPart = await getAutoRoute([
-                        this.path[i].startPoint.coordinates,
-                        specialPoint,
-                        this.path[j].endPoint.coordinates
-                    ])
-                    if (firstPart === null)
+            let fromStart = await getAutoRoute([this.path[0].startPoint.coordinates, specialPoint]);
+            if (fromStart !== null) {
+                let fromSpecial = await getRoutes([{name: await getAddress(specialPoint)}, this.path[this.path.length - 1].endPoint], {
+                    datetime: DATE,
+                    exclusions: new Set()
+                });
+                for(const partial of fromSpecial.others) {
+                    if(!partial)
                         continue
-                    const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
-                    special.push(new MultiRoute(pathFinal))
+                    special.push(new MultiRoute(fromStart.concat(partial.path)))
                 }
             }
+            let toEnd = await getAutoRoute([specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
+            if (toEnd !== null) {
+                let toSpecial = await getRoutes([this.path[this.path.length - 1].endPoint, {name: await getAddress(specialPoint)}], {
+                    datetime: DATE,
+                    exclusions: new Set()
+                });
+                for(const partial of toSpecial.others) {
+                    if(!partial)
+                        continue
+                    special.push(new MultiRoute(partial.path.concat(toEnd)))
+                }
+            }
+
         }
 
+        console.log("Special", special)
         return special
     }
 
     async expandWays(): Promise<MultiRoute[]> {
-        let expanded = await this.expandSpecialPoints()
+        if (this.isCar)
+            return []
 
-        // for (let i = 0; i < this.path.length; i++) {
-        //     for (let j = i; j < this.path.length; j++) {
-        //         let firstPart = await getAutoRoute([this.path[i].startPoint.coordinates, this.path[j].endPoint.coordinates])
-        //         if (firstPart === null)
-        //             continue
-        //         const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
-        //         expanded.push(new MultiRoute(pathFinal))
-        //     }
-        // }
+        let expanded = await this.expandSpecialPoints()
+        // let expanded = []
+        let segmentPair = [0, 0]
+        let segments: number[][] = [];
+
+        for (let i = 0; i < this.path.length; i++) {
+            // @ts-ignore
+            if (this.path[i].info.type === "walk" ||
+                // @ts-ignore
+                this.path[i].info.transports && this.path[i].info.transports.length > 0 &&
+                this.path[i].type === TransportType.publicTransport &&
+                // @ts-ignore
+                this.path[i].info.transports[0].type === "bus") {
+                segmentPair[1] += 1
+            } else {
+                segments.push(segmentPair)
+                segmentPair = [i, i]
+            }
+        }
+
+        console.log(segments, this)
+
+        for (const segment of segments) {
+            let firstPart = await getAutoRoute([
+                this.path[segment[0]].startPoint.coordinates,
+                this.path[segment[1]].endPoint.coordinates
+            ])
+            if (firstPart === null)
+                continue
+            console.log(firstPart)
+            const pathFinal = this.path.slice(0, segment[0]).concat(firstPart).concat(this.path.slice(segment[1] + 1))
+            expanded.push(new MultiRoute(pathFinal, true))
+        }
+
+        console.log(expanded)
         return expanded
     }
 }
@@ -195,7 +239,7 @@ class PossibleRoutes {
         allRoutes = allRoutes.sort((a, b) => {
             let res = 0
             res += (a.path.length - b.path.length) * 0.2 / maxPath
-            res += (a.price - b.price) * 0.8 / maxPrice
+            res += (a.price - b.price) * 0.65 / maxPrice
             res += (a.duration - b.duration) * 0.5 / maxTime
             return res
         })
@@ -242,6 +286,8 @@ const specialPoints: GeoLocation[] = [
 ];
 
 function simplifyMultiRoute(mRoute: MultiRoute): MultiRoute {
+    if (!mRoute.isCar)
+        return mRoute // TOdo
     const paths = mRoute.path;
     if (paths.length == 0) return mRoute;
     let newPath = [];
@@ -328,7 +374,7 @@ async function getBounds(segments: SegmentModel[], path: ymaps.multiRouter.masst
             }, {
                 coordinates: cur.map(it => it.valueOf()),
                 name: await getAddress(cur.map(it => it.valueOf()))
-            }];
+            }]);
         }
 
         prev = cur;
@@ -361,7 +407,6 @@ async function YAPIRouteToMultiRoutePublicTransport(route: ymaps.multiRouter.mas
 }
 
 async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): Promise<MultiRoute> {
-    console.log(route)
     let model: ymaps.multiRouter.driving.RouteModel = route.model
     const path = model.getPaths()[0];
     const segments = path.getSegments();
@@ -398,8 +443,6 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise
     return Promise.all([TransportType.car, TransportType.publicTransport]
         .filter(value => !params.exclusions.has(value))
         .map((value: TransportType): Promise<YAPIRoute> => {
-            console.log(value);
-            console.log(waypoints.map(value => value.name))
             // @ts-ignore
             const multiRoute = new ymaps.multiRouter.MultiRoute({
                 referencePoints: waypoints.map(value => value.name),
