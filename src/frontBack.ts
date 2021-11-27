@@ -263,14 +263,29 @@ async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): 
     return new MultiRoute(routes);
 }
 
-function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
-    let YaRoutes = getYAMultiRoutes(waypoints, params);
+async function getRoutes(waypoints: WayPoint[], params: RequestParams): Promise<PossibleRoutes> {
+    let YaRoutes = await getYAMultiRoutes(waypoints, params);
+    const mRoutes = await Promise.all(YaRoutes.map((it, index) => {
+        if (YaRoutes.length >= 2) {
+            if (index == 0) {
+                // @ts-ignore
+                return YAPIRouteToMultiDriving(it);
+            } else if (index == 1) {
+                // @ts-ignore
+                return YAPIRouteToMultiRoutePublicTransport(it);
+            }
+        } else if (YaRoutes.length == 1) {
+            // TODO
+        }
+        // @ts-ignore
+        return YAPIRouteToMultiDriving(it);
+    }));
+    return new PossibleRoutes(mRoutes);
 
-    return new PossibleRoutes([])
 }
 
 function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise<YAPIRoute[]> {
-    return Promise.all([TransportType.car, TransportType.publicTransport, TransportType.pedestrian]
+    return Promise.all([TransportType.car, TransportType.publicTransport]
         .filter(value => !params.exclusions.has(value))
         .map((value: TransportType): Promise<YAPIRoute> => {
             console.log(value);
