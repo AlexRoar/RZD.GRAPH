@@ -11,7 +11,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 var TransportType;
 (function (TransportType) {
-    TransportType[TransportType["train"] = 0] = "train";
     TransportType["publicTransport"] = "masstransit";
     TransportType["car"] = "auto";
     TransportType["pedestrian"] = "pedestrian";
@@ -69,7 +68,6 @@ class Route {
                 this.price += this.distance * this.rates.simpleCar;
                 this.price += this.duration * this.rates.driver / 60;
             }
-            case TransportType.train:
             case TransportType.publicTransport:
             case TransportType.pedestrian: {
                 //the same
@@ -85,21 +83,12 @@ class PossibleRoutes {
         allRoutes = allRoutes.sort((a, b) => a.duration - b.duration);
         this.fast = allRoutes[0];
         allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.pedestrian) - a.countType(TransportType.pedestrian));
-        allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.train) - a.countType(TransportType.train));
+        allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.publicTransport) - a.countType(TransportType.publicTransport));
         allRoutes = allRoutes.sort((a, b) => a.price - b.price);
         this.cheap = allRoutes[0];
+        allRoutes = allRoutes.sort((a, b) => a.path.length - b.path.length);
         this.others = allRoutes;
-        let transitionsMax = 4;
-        let limitIter = 10;
-        while (this.best === undefined && limitIter > 0) {
-            limitIter--;
-            const filtered = allRoutes.filter((value) => value.path.length < transitionsMax);
-            if (filtered.length) {
-                transitionsMax++;
-                continue;
-            }
-            this.best = filtered[0];
-        }
+        this.best = allRoutes[0];
     }
 }
 function getRoutes(waypoints, params) {
@@ -231,6 +220,62 @@ const mockData = new PossibleRoutes([
         }, {
             duration: 210
         }, TransportType.pedestrian),
+        new Route(17, 0, {
+            name: "Железнодорожный вокзал",
+            coordinates: {
+                lat: 0, lon: 0
+            }
+        }, {
+            name: "Междугородный автовокзал",
+            coordinates: {
+                lat: 0, lon: 0
+            }
+        }, {
+            duration: 17,
+            description: "Автобус 81"
+        }, TransportType.publicTransport),
+        new Route(21, 0, {
+            name: "Красноярск",
+            coordinates: {
+                lat: 0, lon: 0
+            }
+        }, {
+            name: "Березовка, перекресток",
+            coordinates: {
+                lat: 0, lon: 0
+            }
+        }, {
+            duration: 21,
+            description: "Автобус Красноярск — Канск"
+        }, TransportType.publicTransport)
+    ]),
+    new MultiRoute(110, 98, [
+        new Route(1071, 0, {
+            name: "Транспортная улица, 20В",
+            coordinates: {
+                lat: 0, lon: 0
+            }
+        }, {
+            name: "Саянская",
+            coordinates: {
+                lat: 0, lon: 0
+            }
+        }, {
+            duration: 115
+        }, TransportType.pedestrian),
+        new Route(210, 0, {
+            name: "Саянская",
+            coordinates: {
+                lat: 0, lon: 0
+            }
+        }, {
+            name: "Красноярск-Пасс.",
+            coordinates: {
+                lat: 0, lon: 0
+            }
+        }, {
+            duration: 210
+        }, TransportType.publicTransport),
         new Route(17, 0, {
             name: "Железнодорожный вокзал",
             coordinates: {

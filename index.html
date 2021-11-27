@@ -6,12 +6,173 @@
     <script src="https://api-maps.yandex.ru/2.1/?apikey=b388176b-133f-4684-825f-155e1931b7b3&lang=ru_RU"
             type="text/javascript">
     </script>
+    <script src="https://kit.fontawesome.com/2b7af3936c.js" crossorigin="anonymous"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"
             integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script>
         let exports = {};
+        if (!String.prototype.format) {
+            String.prototype.format = function () {
+                const args = arguments;
+                return this.replace(/{(\d+)}/g, function (match, number) {
+                    return typeof args[number] != 'undefined'
+                        ? args[number]
+                        : match
+                        ;
+                });
+            };
+        }
+
+        const carIcon = "<i class=\"fas fa-car\"></i>"
+        const busIcon = "<i class=\"fas fa-bus\"></i>"
+        const pedestrianIcon = "<i class=\"fas fa-walking\"></i>"
+        const chevron = "<i class=\"fas fa-chevron-right\"></i>"
+
+        const resultWrapTemplate = "<div class=\"results-wrap-small\">\n" +
+            "                                <div class=\"row\">\n" +
+            "                                    <div class=\"col-6 col-md-4\">\n" +
+            "                                        <p class=\"waypoint-name\">\n" +
+            "                                            {0}\n" +
+            "                                        </p>\n" +
+            "                                        <p class=\"waypoint-timing\">\n" +
+            "                                            {1} минут\n" +
+            "                                        </p>\n" +
+            "                                    </div>\n" +
+            "                                    <div class=\"col-6 col-md-8\">\n" +
+            "                                        <div class=\"waypoint-info\">\n" +
+            "                                            <p>{2}</p>\n" +
+            "                                            <p class=\"waypoint-way-info\">{3}</p>\n" +
+            "                                            <p>{4}</p>\n" +
+            "                                        </div>\n" +
+            "                                    </div>\n" +
+            "                                </div>\n" +
+            "                            </div>"
+
+        const quickInfoTemplate = "<div onclick=\"activateRoute({6}, '{0}')\" class=\"results-wrap-small-tabbed tabbed-big {0}\">\n" +
+            "                                <div class=\"tabbed-cell results-wrap-small-tabbed\">\n" +
+            "                                    <p>{1}</p>\n" +
+            "                                </div>\n" +
+            "                                <div class=\"tabbed-cell-helper\">\n" +
+            "                                    <div class=\"row\">\n" +
+            "                                        <div class=\"col-6 col-md-5\">\n" +
+            "                                            <p class=\"quick-info\">\n" +
+            "                                                {2}<br>\n" +
+            "                                                {3}<br>\n" +
+            "                                                {4}<br>\n" +
+            "                                            </p>\n" +
+            "                                        </div>\n" +
+            "                                        <div class=\"col-6 col-md-7\">\n" +
+            "                                            {5}\n" +
+            "                                        </div>\n" +
+            "                                    </div>\n" +
+            "                                </div>\n" +
+            "                            </div>"
+
+        let activeRoute = undefined;
+        let activated = false;
     </script>
     <script src="src/frontBack.js"></script>
+    <script>
+        function activateRoute(route, tab) {
+            console.log(route)
+
+            $(".tabbed-big").removeClass("result-tab-selected")
+
+            let pathDetails = ""
+            for (const routeElem of route.path) {
+                let type = ""
+                let description = ""
+                switch (routeElem.type) {
+                    case TransportType.car:
+                        type = "Автомобиль"
+                        description = "{0} километров".format(routeElem.distance)
+                        break;
+                    case TransportType.publicTransport:
+                        type = "Общественный"
+                        description = routeElem.info.description
+                        break;
+                    case TransportType.pedestrian:
+                        type = "Пешеходный"
+                        description = "{0} километров".format(routeElem.distance)
+                        break;
+                }
+                pathDetails += resultWrapTemplate.format(
+                    type, routeElem.duration, routeElem.startPoint.name,
+                    description,
+                    routeElem.endPoint.name
+                )
+            }
+            $(tab).addClass("result-tab-selected")
+            $('#results-content').fadeToggle(400, function () {
+                $(this).html(pathDetails).fadeToggle(400)
+            })
+        }
+
+        function quickRouteInfo(route, className, name, objectName) {
+            let iconsLine = ""
+
+            for (const segment in route.path) {
+                switch (route.path[segment].type) {
+                    case TransportType.car:
+                        iconsLine += carIcon
+                        break;
+                    case TransportType.publicTransport:
+                        iconsLine += busIcon
+                        break;
+                    case TransportType.pedestrian:
+                        iconsLine += pedestrianIcon
+                        break;
+                }
+                console.log(segment, route.path.length)
+                if (parseInt(segment) + 1 !== route.path.length)
+                    iconsLine += chevron
+            }
+
+            return quickInfoTemplate.format(
+                className,
+                name,
+                "<span class='accent'>{0}</span> минут".format(route.duration),
+                "<span class='accent'>{0}</span> км".format(route.distance),
+                "<span class='accent'>{0}</span> рублей".format(Math.round(route.price)),
+                iconsLine,
+                objectName)
+        }
+
+        function calculateRoute() {
+            if (!activated) {
+                $("#search-container").animate({'marginTop': '20px'}, 400);
+                $("#container-result").slideToggle()
+                activated = true
+            }
+            activeRoute = mockData
+
+            $('#all-quick-results').html('')
+            let res = ""
+
+            if (activeRoute.best)
+                res += quickRouteInfo(activeRoute.best,
+                    "optimal-tab",
+                    "Оптимальный",
+                    "activeRoute.best")
+
+            if (activeRoute.fast)
+                res += quickRouteInfo(activeRoute.fast,
+                    "fast-tab",
+                    "Самый быстрый",
+                    "activeRoute.fast")
+
+            if (activeRoute.cheap)
+                res += quickRouteInfo(activeRoute.cheap,
+                    "cheap-tab",
+                    "Самый дешевый",
+                    "activeRoute.cheap")
+
+            $('#all-quick-results').html(res)
+
+
+            activateRoute(activeRoute.best, '.optimal-tab')
+        }
+    </script>
     <meta charset="utf-8">
     <!-- CSS only -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -51,67 +212,59 @@
             </div>
         </div>
         <div class="col-md-2">
-            <button type="button" class="btn btn-dark" id="search-button">
+            <button onclick="calculateRoute()" type="button" class="btn btn-dark" id="search-button">
                 Построить
             </button>
         </div>
     </div>
 </div>
-<div id="container-result" class="container">
+<div style="display: none" id="container-result" class="container">
     <div class="row">
         <div class="col-12">
             <div id="results-big-wrap">
                 <div class="row">
                     <div class="col-6 col-md-7 ">
-                        <div class="results-wrap">
-                            <div class="results-wrap-small">
-                                <div class="row">
-                                    <div class="col-6 col-md-3">
-                                        fsdfs
-                                    </div>
-                                    <div class="col-6 col-md-9">
-                                        sdfd
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="results-wrap-small">
-                                <div class="row">
-                                    <div class="col-6 col-md-3">
-                                        fsdfs
-                                    </div>
-                                    <div class="col-6 col-md-9">
-                                        sdfd
-                                    </div>
-                                </div>
-                            </div>
+                        <div id="results-content" class="results-wrap">
                         </div>
+                        <div id="map" class="results-wrap results-wrap-map">
+
+                        </div>
+                        <script>
+                            ymaps.ready(() => {
+                                var myMap = new ymaps.Map('map', {
+                                    center: [55.74, 37.58],
+                                    zoom: 13,
+                                    controls: []
+                                });
+                            })
+                        </script>
                     </div>
                     <div class="col-6 col-md-5">
-                        <div class="results-wrap">
-                            <div class="results-wrap-small-tabbed tabbed-big optimal-tab">
+                        <div id="all-quick-results" class="results-wrap">
+
+                            <div onclick="activateRoute(activeRoute.cheap, '.cheap-tab')"
+                                 class="results-wrap-small-tabbed tabbed-big cheap-tab">
                                 <div class="tabbed-cell results-wrap-small-tabbed">
-                                    <p>Оптимальный</p>
+                                    <p>Cамый дешевый</p>
                                 </div>
                                 <div class="tabbed-cell-helper">
 
                                 </div>
                             </div>
-                            <div class="results-wrap-small-tabbed tabbed-big cheap-tab">
-                                <div class="tabbed-cell results-wrap-small-tabbed">
-                                    <p>Cамый дешевый</p>
-                                </div>
-                                <div class="tabbed-cell-helper"></div>
-                            </div>
-                            <div class="results-wrap-small-tabbed tabbed-big fast-tab">
+                            <div onclick="activateRoute(activeRoute.fast, '.fast-tab')"
+                                 class="results-wrap-small-tabbed tabbed-big fast-tab">
                                 <div class="tabbed-cell results-wrap-small-tabbed">
                                     <p>Cамый быстрый</p>
                                 </div>
-                                <div class="tabbed-cell-helper"></div>
+                                <div class="tabbed-cell-helper">
+
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>

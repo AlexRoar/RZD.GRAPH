@@ -74,7 +74,7 @@ header p {
     color: #868686;
     border-radius: 25px;
     padding: 10px;
-    vertical-align:middle;
+    vertical-align: middle;
 }
 
 .find-part {
@@ -171,7 +171,6 @@ input:focus-visible, input:focus {
     /* ShadowGeneral */
 
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.12);
-    height: 100px;
     padding: 20px;
     margin-top: 10px;
     margin-bottom: 10px;
@@ -192,7 +191,7 @@ input:focus-visible, input:focus {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.12);
     border-radius: 0 25px 25px 25px;
     margin-top: 40px;
-    height: 120px;
+    height: 80px;
 }
 
 .results-wrap-small-tabbed:first-child {
@@ -228,6 +227,7 @@ input:focus-visible, input:focus {
     position: absolute;
     border-radius: 0 25px 25px 25px;
     margin-top: 0;
+    padding: 15px;
 }
 
 .optimal-tab .tabbed-cell p {
@@ -241,9 +241,8 @@ input:focus-visible, input:focus {
     color: #7B67FB;
 }
 
-.optimal-tab.results-wrap-small-tabbed,
-.optimal-tab .results-wrap-small-tabbed {
-    box-shadow: 0px 0px 10px rgba(123, 103, 251, 0.49);
+.optimal-tab i {
+    color: #7B67FB;
 }
 
 .cheap-tab .tabbed-cell p {
@@ -258,6 +257,14 @@ input:focus-visible, input:focus {
     color: #C31B1C;
 }
 
+.cheap-tab i {
+    color: #C31B1C;
+}
+
+.accent {
+    color: #C31B1C;
+}
+
 .fast-tab {
     font-family: SF Pro Text, serif;
     font-style: normal;
@@ -269,4 +276,114 @@ input:focus-visible, input:focus {
 
 
     color: #EB784C;
+}
+
+.waypoint-name {
+    font-family: Montserrat, serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 17px;
+
+    color: #000000;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.waypoint-timing {
+    font-family: Montserrat, serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 13px;
+    line-height: 16px;
+
+    /* GrayDarker */
+
+    color: #868686;
+}
+
+.waypoint-info {
+    border-left: solid 2px #868686;
+    padding-left: 4px;
+}
+
+.waypoint-info p {
+    margin: 0;
+    padding: 0;
+    font-family: Montserrat, serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 17px;
+
+    color: #000000;
+}
+
+p.waypoint-way-info {
+    padding-top: 5px;
+    padding-bottom: 5px;
+
+    font-family: Montserrat, serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 13px;
+    line-height: 16px;
+    /* identical to box height */
+
+    display: flex;
+    align-items: center;
+
+    /* GrayDarker */
+
+    color: #868686;
+}
+
+.tabbed-big {
+    cursor: pointer;
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.results-wrap-small-tabbed,
+div.results-wrap-small-tabbed,
+div.results-wrap-small-tabbed {
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+
+.tabbed-big:hover .results-wrap-small-tabbed,
+.tabbed-big:hover div.results-wrap-small-tabbed,
+div.results-wrap-small-tabbed:hover {
+    box-shadow: 0px 0px 30px rgba(123, 103, 251, 0.49) !important;
+    transition: 5ms ease-in-out;
+}
+
+.result-tab-selected, .result-tab-selected .results-wrap-small-tabbed {
+    box-shadow: 0 0px 20px rgba(123, 103, 251, 0.49) !important;
+    transition: 5ms ease-in-out;
+}
+
+div.results-wrap-map {
+    margin-top: 20px;
+    padding: 0;
+    height: 512px;
+}
+
+#map ymaps:first-child {
+    border-radius: 45px;
+}
+
+.quick-info {
+    font-family: SF Pro Text, serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 17px;
+    font-variant: small-caps;
+
+    /* Black */
+    color: #1F1E23;
+}
+
+.tabbed-cell-helper i {
+    padding: 3px;
 }

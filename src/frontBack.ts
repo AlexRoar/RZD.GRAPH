@@ -10,7 +10,6 @@ interface GeoLocation {
 }
 
 enum TransportType {
-    train,
     publicTransport = "masstransit",
     car = "auto",
     pedestrian = "pedestrian"
@@ -22,12 +21,12 @@ interface RequestParams {
 }
 
 class MultiRoute {
-    duration: number
-    distance: number = 0
-    price: number = 0
-    hiddenPrice: number = 0
+    public duration: number
+    public distance: number = 0
+    public price: number = 0
+    public hiddenPrice: number = 0
 
-    path: Route[] = []
+    public path: Route[] = []
 
     constructor(duration: number, distance: number, path: Route[]) {
         this.duration = duration
@@ -71,15 +70,15 @@ class Route {
         worker: 710
     }
 
-    duration: number = 0
-    distance: number = 0
-    price: number = 0
-    hiddenPrice: number = 0
+    public duration: number = 0
+    public distance: number = 0
+    public price: number = 0
+    public hiddenPrice: number = 0
 
-    startPoint: RoutePoint = {coordinates: {lat: 0, lon: 0}, name: ""}
-    endPoint: RoutePoint = {coordinates: {lat: 0, lon: 0}, name: ""}
-    info: object = {}
-    type: TransportType = TransportType.car
+    public startPoint: RoutePoint = {coordinates: {lat: 0, lon: 0}, name: ""}
+    public endPoint: RoutePoint = {coordinates: {lat: 0, lon: 0}, name: ""}
+    public info: object = {}
+    public type: TransportType = TransportType.car
 
     constructor(duration: number,
                 distance: number,
@@ -101,7 +100,6 @@ class Route {
                 this.price += this.duration * this.rates.driver / 60
 
             }
-            case TransportType.train:
             case TransportType.publicTransport:
             case TransportType.pedestrian: {
                 //the same
@@ -111,11 +109,11 @@ class Route {
 }
 
 class PossibleRoutes {
-    fast?: MultiRoute
-    cheap?: MultiRoute
-    best?: MultiRoute
+    public fast?: MultiRoute
+    public cheap?: MultiRoute
+    public best?: MultiRoute
 
-    others: MultiRoute[] = []
+    public others: MultiRoute[] = []
 
     constructor(allRoutes: MultiRoute[]) {
         if (allRoutes.length == 0)
@@ -124,7 +122,7 @@ class PossibleRoutes {
         allRoutes = allRoutes.sort((a, b) => a.duration - b.duration)
         this.fast = allRoutes[0]
         allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.pedestrian) - a.countType(TransportType.pedestrian))
-        allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.train) - a.countType(TransportType.train))
+        allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.publicTransport) - a.countType(TransportType.publicTransport))
         allRoutes = allRoutes.sort((a, b) => a.price - b.price)
         this.cheap = allRoutes[0]
         allRoutes = allRoutes.sort((a, b) => a.path.length - b.path.length)
@@ -291,6 +289,66 @@ const mockData: PossibleRoutes = new PossibleRoutes([
             }, {
                 duration: 210
             }, TransportType.pedestrian),
+        new Route(17, 0,
+            {
+                name: "Железнодорожный вокзал",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "Междугородный автовокзал",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 17,
+                description: "Автобус 81"
+            }, TransportType.publicTransport),
+        new Route(21, 0,
+            {
+                name: "Красноярск",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "Березовка, перекресток",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 21,
+                description: "Автобус Красноярск — Канск"
+            }, TransportType.publicTransport)
+    ]),
+    new MultiRoute(110, 98, [
+        new Route(1071, 0,
+            {
+                name: "Транспортная улица, 20В",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "Саянская",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 115
+            }, TransportType.pedestrian),
+        new Route(210, 0,
+            {
+                name: "Саянская",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "Красноярск-Пасс.",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 210
+            }, TransportType.publicTransport),
         new Route(17, 0,
             {
                 name: "Железнодорожный вокзал",
