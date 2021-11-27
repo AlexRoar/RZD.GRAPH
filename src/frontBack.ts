@@ -90,16 +90,23 @@ function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes
 
 }
 
-function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): YAPIRoute[] {
+function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise<YAPIRoute>[] {
     return [TransportType.car, TransportType.publicTransport, TransportType.pedestrian]
         .filter(value => !params.exclusions.has(value))
-        .map(() => new ymaps.multiRouter.MultiRoute({
+        .map(() => {
+            // @ts-ignore
+            const multiRoute = new ymaps.multiRouter.MultiRoute({
                 referencePoints: waypoints.map(value => value.name),
                 params: {
                     results: 1
                 }
+            });
+            return new Promise((resolve, reject) => {
+                multiRoute.model.events.add('requestsuccess', function () {
+                    resolve(multiRoute.getActiveRoute()!);
+                })
             })
-        );
+        });
 }
 
 /**
@@ -147,6 +154,14 @@ function getStations(userPoint: GeoLocation, range: number): YAPISearchControlEn
  * @param date
  */
 function getSchedule(firstStation: string, secondStation: string, date: Date): TrainSchedule[] /* TODO */ {
-    return [];
+    $.ajax({
+        url: `https://kraspg.ru/r?from=${firstStation}&to=${secondStation}&date=${date.getDay()}.${date.getMonth()}.${date.getFullYear()}&search=%D0%9D%D0%B0%D0%B9%D1%82%D0%B8`,
+        data: {
+            zipcode: 97201
+        },
+        success: function (result) {
+            $("#weather-temp").html("<strong>" + result + "</strong> degrees");
+        }
+    });
 }
 
