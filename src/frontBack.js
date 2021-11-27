@@ -48,8 +48,8 @@ class Route {
         this.distance = 0;
         this.price = 0;
         this.hiddenPrice = 0;
-        this.startPoint = { coordinates: { lat: 0, lon: 0 }, name: "" };
-        this.endPoint = { coordinates: { lat: 0, lon: 0 }, name: "" };
+        this.startPoint = { coordinates: [0, 0], name: "" };
+        this.endPoint = { coordinates: [0, 0], name: "" };
         this.info = {};
         this.type = TransportType.car;
         this.duration = duration;
@@ -151,7 +151,6 @@ function getYAMultiRoutes(waypoints, params) {
             referencePoints: waypoints.map(value => value.name),
             params: {
                 results: 1,
-                // @ts-ignore
                 routingMode: value
             },
         });
@@ -162,68 +161,65 @@ function getYAMultiRoutes(waypoints, params) {
         });
     }));
 }
+function getAutoRoute(start, end) {
+    const multiRoute = new ymaps.multiRouter.MultiRoute({
+        referencePoints: [
+            start,
+            end
+        ],
+        params: {
+            results: 1,
+            routingMode: TransportType.car
+        },
+    });
+    return new Promise((resolve, reject) => {
+        multiRoute.model.events.add('requestsuccess', function () {
+            resolve(multiRoute.getActiveRoute());
+        });
+    });
+}
 const mockData = new PossibleRoutes([
     new MultiRoute([
         new Route(123, 180, {
             name: "Транспортная улица, 20В",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "посёлок городского типа Березовка",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {}, TransportType.car)
     ]),
     new MultiRoute([
         new Route(10, 0.520, {
             name: "Транспортная улица, 20В",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "Саянская",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {}, TransportType.pedestrian),
         new Route(170, 40, {
             name: "Саянская",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "Красноярск-Пасс.",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             description: "Электричка А — Б"
         }, TransportType.publicTransport),
         new Route(17, 5, {
             name: "Железнодорожный вокзал",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "Междугородный автовокзал",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             description: "Автобус 81"
         }, TransportType.publicTransport),
         new Route(21, 4, {
             name: "Красноярск",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "Березовка, перекресток",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             description: "Автобус Красноярск — Канск"
         }, TransportType.publicTransport)
@@ -231,51 +227,35 @@ const mockData = new PossibleRoutes([
     new MultiRoute([
         new Route(101, 60, {
             name: "Транспортная улица, 20В",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "Саянская",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {}, TransportType.pedestrian),
         new Route(17, 12, {
             name: "Саянская",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "Красноярск-Пасс.",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             description: "Электричка А — Б"
         }, TransportType.publicTransport),
         new Route(17, 5, {
             name: "Железнодорожный вокзал",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "Междугородный автовокзал",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             description: "Автобус 81"
         }, TransportType.publicTransport),
         new Route(21, 8, {
             name: "Красноярск",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             name: "Березовка, перекресток",
-            coordinates: {
-                lat: 0, lon: 0
-            }
+            coordinates: [0, 0]
         }, {
             description: "Автобус Красноярск — Канск"
         }, TransportType.publicTransport)
