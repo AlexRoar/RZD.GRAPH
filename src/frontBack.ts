@@ -303,6 +303,8 @@ async function YAPIRouteToMultiRoutePublicTransport(route: ymaps.multiRouter.mas
     const routes = segments.map((segment, index) =>
         new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {
             // @ts-ignore
+            type: segment.properties.get("type", "transport"),
+            // @ts-ignore
             transports: segment.properties.get("transports", []).map((it: { name: string; type: string; }) => {
                 return {name: it.name, type: it.type}
             }),
