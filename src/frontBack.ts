@@ -52,6 +52,43 @@ class MultiRoute {
         })
             .reduce(((previousValue, currentValue) => previousValue + currentValue))
     }
+
+    async expandSpecialPoints(): Promise<MultiRoute[]> {
+        let special: MultiRoute[] = []
+
+        for (const specialPoint of specialPoints) {
+            for (let i = 0; i < this.path.length; i++) {
+                for (let j = i; j < this.path.length; j++) {
+                    let firstPart = await getAutoRoute([
+                        this.path[i].startPoint.coordinates,
+                        specialPoint,
+                        this.path[j].endPoint.coordinates
+                    ])
+                    if (firstPart === null)
+                        continue
+                    const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
+                    special.push(new MultiRoute(pathFinal))
+                }
+            }
+        }
+
+        return special
+    }
+
+    async expandWays(): Promise<MultiRoute[]> {
+        let expanded = await this.expandSpecialPoints()
+
+        for (let i = 0; i < this.path.length; i++) {
+            for (let j = i; j < this.path.length; j++) {
+                let firstPart = await getAutoRoute([this.path[i].startPoint.coordinates, this.path[j].endPoint.coordinates])
+                if (firstPart === null)
+                    continue
+                const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
+                expanded.push(new MultiRoute(pathFinal))
+            }
+        }
+        return expanded
+    }
 }
 
 interface RoutePoint {
@@ -117,9 +154,26 @@ class PossibleRoutes {
 
     public others: MultiRoute[] = []
 
+    async imitateBetterWays(allRoutes: MultiRoute[]): Promise<MultiRoute[]> {
+        let resultWays = allRoutes
+
+        for (const multiWay of allRoutes) {
+            const expanded = await multiWay.expandWays()
+            resultWays = resultWays.concat(expanded)
+        }
+
+        return resultWays
+    }
+
+
     constructor(allRoutes: MultiRoute[]) {
         if (allRoutes.length == 0)
             return
+        this.others = allRoutes
+    }
+
+    async build() {
+        let allRoutes = await this.imitateBetterWays(this.others)
 
         allRoutes = allRoutes.sort((a, b) => a.duration - b.duration)
         this.fast = allRoutes[0]
@@ -180,12 +234,16 @@ type SegmentModel =
     | ymaps.multiRouter.driving.SegmentModel
 
 
+const specialPoints: GeoLocation[] = [
+    [55.805913, 94.329253], // Уяр
+    [55.545684, 94.702848], // Саянская
+];
+
 function getDistance(segment: SegmentModel): number {
     // @ts-ignore
     return Math.floor(segment.properties.get('distance', {
         text: "1 км",
         value: 1000
-        // @ts-ignore
     }).value / 1000);
 }
 
@@ -307,21 +365,23 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise
 }
 
 
-function getAutoRoute(start: GeoLocation, end: GeoLocation): Promise<YAPIRoute> {
+function getAutoRoute(points: GeoLocation[]): Promise<Route[] | null> {
     // @ts-ignore
     const multiRoute = new ymaps.multiRouter.MultiRoute({
-        referencePoints: [
-            start,
-            end
-        ],
+        referencePoints: points,
         params: {
             results: 1,
             routingMode: TransportType.car
         },
     });
-    return new Promise((resolve: (_: YAPIRoute) => void, reject) => {
+    return new Promise( (resolve: (_: Route[] | null) => void, reject) => {
         multiRoute.model.events.add('requestsuccess', function () {
-            resolve(multiRoute.getActiveRoute()!);
+            let route = multiRoute.getActiveRoute()
+            if (!route)
+                resolve(null)
+            YAPIRouteToMultiDriving(route as ymaps.multiRouter.driving.Route).then((value) => {
+                resolve(value.path)
+            })
         })
     });
 }

@@ -35,6 +35,38 @@ class MultiRoute {
         })
             .reduce(((previousValue, currentValue) => previousValue + currentValue));
     }
+    async expandSpecialPoints() {
+        let special = [];
+        for (const specialPoint of specialPoints) {
+            for (let i = 0; i < this.path.length; i++) {
+                for (let j = i; j < this.path.length; j++) {
+                    let firstPart = await getAutoRoute([
+                        this.path[i].startPoint.coordinates,
+                        specialPoint,
+                        this.path[j].endPoint.coordinates
+                    ]);
+                    if (firstPart === null)
+                        continue;
+                    const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1));
+                    special.push(new MultiRoute(pathFinal));
+                }
+            }
+        }
+        return special;
+    }
+    async expandWays() {
+        let expanded = await this.expandSpecialPoints();
+        for (let i = 0; i < this.path.length; i++) {
+            for (let j = i; j < this.path.length; j++) {
+                let firstPart = await getAutoRoute([this.path[i].startPoint.coordinates, this.path[j].endPoint.coordinates]);
+                if (firstPart === null)
+                    continue;
+                const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1));
+                expanded.push(new MultiRoute(pathFinal));
+            }
+        }
+        return expanded;
+    }
 }
 class Route {
     constructor(duration, distance, startPoint, endPoint, info = {}, type) {
@@ -77,6 +109,18 @@ class PossibleRoutes {
         this.others = [];
         if (allRoutes.length == 0)
             return;
+        this.others = allRoutes;
+    }
+    async imitateBetterWays(allRoutes) {
+        let resultWays = allRoutes;
+        for (const multiWay of allRoutes) {
+            const expanded = await multiWay.expandWays();
+            resultWays = resultWays.concat(expanded);
+        }
+        return resultWays;
+    }
+    async build() {
+        let allRoutes = await this.imitateBetterWays(this.others);
         allRoutes = allRoutes.sort((a, b) => a.duration - b.duration);
         this.fast = allRoutes[0];
         allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.pedestrian) - a.countType(TransportType.pedestrian));
@@ -106,7 +150,12 @@ class PossibleRoutes {
             this.car = carOnly[0];
     }
 }
+const specialPoints = [
+    [55.805913, 94.329253],
+    [55.545684, 94.702848], // Саянская
+];
 function getDistance(segment) {
+    // @ts-ignore
     return Math.floor(segment.properties.get('distance', {
         text: "1 км",
         value: 1000
@@ -114,27 +163,69 @@ function getDistance(segment) {
     }).value / 1000);
 }
 function getDuration(segment) {
+    // @ts-ignore
     return Math.floor(segment.properties.get('duration', {
         text: "30 мин",
         value: 60
         // @ts-ignore
     }).value / 60);
 }
-function getBounds(segments, path) {
+function getAddress(coords) {
+    return new Promise((resolve, reject) => {
+        // @ts-ignore
+        ymaps.geocode(coords).then(function (res) {
+            const firstGeoObject = res.geoObjects.get(0);
+            resolve(firstGeoObject.getAddressLine());
+        });
+    });
+}
+async function getBounds(segments, path) {
     const coords = path.properties.get("coordinates", []);
     const result = [];
     // @ts-ignore
-    const prev = coords[segments[0].properties.get("lodIndex", 0)];
+    let prev = coords[segments[0].properties.get("lodIndex", 0)];
     for (const segment of segments.slice(1)) {
-        result.push([{ coordinates: prev, name: ymaps.geocode() },]);
+        // @ts-ignore
+        const cur = coords[segment.properties.get("lodIndex", coords.length - 1)];
+        result.push([{
+                coordinates: prev.map(it => it.valueOf()),
+                name: await getAddress(prev.map(it => it.valueOf()))
+            }, {
+                coordinates: cur.map(it => it.valueOf()),
+                name: await getAddress(cur.map(it => it.valueOf()))
+            }]);
+        prev = cur;
     }
+    const last = coords[coords.length - 1];
+    result.push([{ coordinates: prev.map(it => it.valueOf()), name: await getAddress(prev.map(it => it.valueOf())) }, {
+            coordinates: last.map(it => it.valueOf()),
+            name: await getAddress(last.map(n => n.valueOf()))
+        }]);
+    return result;
 }
-function YAPIRouteToMultiRoute(route) {
+async function YAPIRouteToMultiRoutePublicTransport(route) {
     let model = route.model;
     const path = model.getPaths()[0];
     const segments = path.getSegments();
-    const bounds = getBounds(segments, path);
-    segments.map(segment => new Route(getDuration(segment), getDistance(segment)));
+    const bounds = await getBounds(segments, path);
+    const routes = segments.map((segment, index) => new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {
+        // @ts-ignore
+        transports: segment.properties.get("transports", []).map((it) => {
+            return { name: it.name, type: it.type };
+        }),
+        // @ts-ignore
+        text: segment.properties.get("text", ""),
+    }, TransportType.publicTransport));
+    return new MultiRoute(routes);
+}
+async function YAPIRouteToMultiDriving(route) {
+    // @ts-ignore
+    let model = route.model;
+    const path = model.getPaths()[0];
+    const segments = path.getSegments();
+    const bounds = await getBounds(segments, path);
+    const routes = segments.map((segment, index) => new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.publicTransport));
+    return new MultiRoute(routes);
 }
 function getRoutes(waypoints, params) {
     let YaRoutes = getYAMultiRoutes(waypoints, params);
@@ -161,12 +252,10 @@ function getYAMultiRoutes(waypoints, params) {
         });
     }));
 }
-function getAutoRoute(start, end) {
+function getAutoRoute(points) {
+    // @ts-ignore
     const multiRoute = new ymaps.multiRouter.MultiRoute({
-        referencePoints: [
-            start,
-            end
-        ],
+        referencePoints: points,
         params: {
             results: 1,
             routingMode: TransportType.car
@@ -174,7 +263,12 @@ function getAutoRoute(start, end) {
     });
     return new Promise((resolve, reject) => {
         multiRoute.model.events.add('requestsuccess', function () {
-            resolve(multiRoute.getActiveRoute());
+            let route = multiRoute.getActiveRoute();
+            if (!route)
+                resolve(null);
+            YAPIRouteToMultiDriving(route).then((value) => {
+                resolve(value.path);
+            });
         });
     });
 }
