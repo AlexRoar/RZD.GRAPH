@@ -317,7 +317,7 @@ async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): 
     const segments = path.getSegments();
     const bounds = await getBounds(segments, path);
     const routes = segments.map((segment, index) =>
-        new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.publicTransport));
+        new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.car));
     return new MultiRoute(routes);
 }
 
