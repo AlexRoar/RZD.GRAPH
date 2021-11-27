@@ -1,16 +1,34 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const yandex_maps_1 = __importDefault(require("yandex-maps"));
-const dataTypes_1 = require("./dataTypes");
+var TransportType;
+(function (TransportType) {
+    TransportType[TransportType["train"] = 0] = "train";
+    TransportType["publicTransport"] = "masstransit";
+    TransportType["car"] = "auto";
+    TransportType["pedestrian"] = "pedestrian";
+})(TransportType || (TransportType = {}));
+class MultiRoute {
+    constructor() {
+        this.duration = 0;
+        this.distance = 0;
+        this.price = 0;
+        this.hiddenPrice = 0;
+        this.path = [];
+    }
+    calcParameters() {
+    }
+}
+class PossibleRoutes {
+    constructor(allRoutes) {
+        this.others = [];
+    }
+}
 function getRoutes(waypoints, params) {
 }
 function getYAMultiRoutes(waypoints, params) {
-    return [dataTypes_1.TransportType.car, dataTypes_1.TransportType.publicTransport, dataTypes_1.TransportType.pedestrian]
+    return [TransportType.car, TransportType.publicTransport, TransportType.pedestrian]
         .filter(value => !params.exclusions.has(value))
-        .map(() => new yandex_maps_1.default.multiRouter.MultiRoute({
+        .map(() => new ymaps.multiRouter.MultiRoute({
         referencePoints: waypoints.map(value => value.name),
         params: {
             results: 1
@@ -23,7 +41,7 @@ function getYAMultiRoutes(waypoints, params) {
  * @param range in degrees
  */
 function getStations(userPoint, range) {
-    const searchControl = new yandex_maps_1.default.control.SearchControl({
+    const searchControl = new ymaps.control.SearchControl({
         options: {
             provider: 'yandex#search',
             boundedBy: [[userPoint.lat - range, userPoint.lon - range], [userPoint.lat + range, userPoint.lon + range]]
@@ -57,4 +75,5 @@ function getStations(userPoint, range) {
  * @param date
  */
 function getSchedule(firstStation, secondStation, date) {
+    return [];
 }

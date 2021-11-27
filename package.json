@@ -6,7 +6,9 @@
   "author": "Aleksandr Dremov <dremov.me@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@types/yandex-maps": "^2.1.20"
+    "@types/yandex-maps": "^2.1.20",
+    "http-server": "^14.0.0",
+    "ts-browser": "^1.0.4"
   },
   "scripts": {
     "build": "tsc"

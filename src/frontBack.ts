@@ -1,13 +1,90 @@
-import ymaps from "yandex-maps";
-import {
-    WayPoint,
-    GeoLocation,
-    PossibleRoutes,
-    RequestParams,
-    TransportType,
-    YAPIRoute,
-    YAPISearchControlEntity
-} from "./dataTypes";
+import type ymaps from "yandex-maps";
+interface WayPoint {
+    name: string
+}
+
+interface GeoLocation {
+    lat: number,
+    lon: number
+}
+
+enum TransportType {
+    train,
+    publicTransport = "masstransit",
+    car = "auto",
+    pedestrian = "pedestrian"
+}
+
+interface RequestParams {
+    datetime: Date
+    exclusions: Set<TransportType>
+}
+
+class MultiRoute {
+    duration: number = 0
+    distance: number = 0
+    price: number = 0
+    hiddenPrice: number = 0
+
+    path: Route[] = []
+
+    constructor() {
+
+    }
+
+    private calcParameters() {
+
+    }
+}
+
+interface RoutePoint {
+    coordinates: { lat: number, lon: number }
+    name: string
+}
+
+interface TrainSchedule {
+
+}
+
+interface Route {
+    duration: number
+    distance: number
+    price: number
+    hiddenPrice: number
+
+    startPoint: RoutePoint
+    endPoint: RoutePoint
+    info: object
+}
+
+class PossibleRoutes {
+    fast?: MultiRoute
+    cheap?: MultiRoute
+    best?: MultiRoute
+
+    others: MultiRoute[] = []
+
+    constructor(allRoutes: MultiRoute[]) {
+
+    }
+}
+
+interface YAPISearchControlEntity {
+    geometry: {
+        _coordinates: number[],
+        _bounds: number[][]
+    }
+    properties: {
+        _data: {
+            address: string,
+            categories: string[],
+            categoriesText: string,
+            description: string
+        }
+    }
+}
+
+type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit.Route | object
 
 function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
 
@@ -50,9 +127,9 @@ function getStations(userPoint: GeoLocation, range: number): YAPISearchControlEn
     }
 
     allResults = allResults.filter((element, index) => {
-        for(const discriminator of namesDiscriminator) {
-            for(const catWord of element.properties._data.categoriesText.split(' ')){
-                if(catWord.toLowerCase().includes(discriminator.toLowerCase())) {
+        for (const discriminator of namesDiscriminator) {
+            for (const catWord of element.properties._data.categoriesText.split(' ')) {
+                if (catWord.toLowerCase().includes(discriminator.toLowerCase())) {
                     return true
                 }
             }
@@ -70,6 +147,6 @@ function getStations(userPoint: GeoLocation, range: number): YAPISearchControlEn
  * @param date
  */
 function getSchedule(firstStation: string, secondStation: string, date: Date): TrainSchedule[] /* TODO */ {
-
+    return [];
 }
 
