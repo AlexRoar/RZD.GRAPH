@@ -90,7 +90,9 @@ class PossibleRoutes {
         this.cheap = allRoutes[0];
         this.others = allRoutes;
         let transitionsMax = 4;
-        while (this.best === undefined) {
+        let limitIter = 10;
+        while (this.best === undefined && limitIter > 0) {
+            limitIter--;
             const filtered = allRoutes.filter((value) => value.path.length < transitionsMax);
             if (filtered.length) {
                 transitionsMax++;

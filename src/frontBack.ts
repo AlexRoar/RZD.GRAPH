@@ -127,17 +127,9 @@ class PossibleRoutes {
         allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.train) - a.countType(TransportType.train))
         allRoutes = allRoutes.sort((a, b) => a.price - b.price)
         this.cheap = allRoutes[0]
+        allRoutes = allRoutes.sort((a, b) => a.path.length - b.path.length)
         this.others = allRoutes
-        let transitionsMax = 4
-
-        while (this.best === undefined) {
-            const filtered = allRoutes.filter((value) => value.path.length < transitionsMax)
-            if (filtered.length) {
-                transitionsMax++
-                continue;
-            }
-            this.best = filtered[0]
-        }
+        this.best = allRoutes[0]
     }
 }
 
