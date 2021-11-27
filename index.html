@@ -83,7 +83,7 @@
             if (priceUp > 0) {
                 $('#price-better').html(
                     ("<p><span class=\"accent\">{0}</span> {1}</p>" +
-                    "<p>Экономия за поездку</p>").format(
+                        "<p>Экономия за поездку</p>").format(
                         Math.round(priceUp),
                         "рублей"
                     ))
@@ -95,7 +95,7 @@
             if (timeUp > 0) {
                 $('#time-better').html(
                     ("<p><span class=\"accent\">{0}</span> {1}</p>" +
-                    "<p>Быстрее,чем просто авто</p>").format(
+                        "<p>Быстрее,чем просто авто</p>").format(
                         Math.round(timeUp),
                         "минут"
                     ))
@@ -163,13 +163,22 @@
                 objectName)
         }
 
-        function calculateRoute() {
+        async function calculateRoute() {
             if (!activated) {
                 $("#search-container").animate({'marginTop': '20px'}, 400);
                 $("#container-result").slideToggle()
                 activated = true
             }
-            activeRoute = mockData
+            activeRoute = await getRoutes([
+                {name: $('#wpt-1').val()},
+                {name: $('#wpt-2').val()}
+            ], {
+                exclusions: new Set([]),
+                datetime: new Date()
+            })
+
+            console.log(activeRoute)
+
 
             $('#all-quick-results').html('')
             let res = ""
@@ -219,15 +228,15 @@
             <div id="search-fields">
                 <div class="row">
                     <div class="col-3 col-md-4 find-part .no-gutters from-search">
-                        <input placeholder="Откуда">
+                        <input id="wpt-1" placeholder="Откуда">
                         <span class="plus-divider">+</span>
                     </div>
                     <div class="col-3 col-md-4 find-part .no-gutters to-search">
-                        <input placeholder="Куда">
+                        <input id="wpt-2" placeholder="Куда">
                         <span class="plus-divider">+</span>
                     </div>
                     <div class="col-3 col-md-2 find-part .no-gutters when-search">
-                        <input placeholder="Когда">
+                        <input type="date" id="when-search" placeholder="Когда">
                     </div>
                     <div id="params-field" class="col-3 col-md-2 find-part .no-gutters">
                         <p>Опции</p>
