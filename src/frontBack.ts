@@ -177,8 +177,11 @@ type SegmentModel =
     ymaps.multiRouter.masstransit.TransferSegmentModel
     | ymaps.multiRouter.masstransit.TransportSegmentModel
     | ymaps.multiRouter.masstransit.WalkSegmentModel
+    | ymaps.multiRouter.driving.SegmentModel
+
 
 function getDistance(segment: SegmentModel): number {
+    // @ts-ignore
     return Math.floor(segment.properties.get('distance', {
         text: "1 км",
         value: 1000
@@ -187,6 +190,7 @@ function getDistance(segment: SegmentModel): number {
 }
 
 function getDuration(segment: SegmentModel): number {
+    // @ts-ignore
     return Math.floor(segment.properties.get('duration', {
         text: "30 мин",
         value: 60
@@ -205,7 +209,7 @@ function getAddress(coords: number[]): Promise<string> {
 }
 
 
-async function getBounds(segments: SegmentModel[], path: ymaps.multiRouter.masstransit.PathModel): Promise<RoutePoint[][]> {
+async function getBounds(segments: SegmentModel[], path: ymaps.multiRouter.masstransit.PathModel | ymaps.multiRouter.driving.PathModel): Promise<RoutePoint[][]> {
     const coords: Number[][] = path.properties.get("coordinates", []) as Number[][];
     const result: RoutePoint[][] = [];
     // @ts-ignore
@@ -214,21 +218,24 @@ async function getBounds(segments: SegmentModel[], path: ymaps.multiRouter.masst
     for (const segment of segments.slice(1)) {
         // @ts-ignore
         const cur = coords[segment.properties.get("lodIndex", coords.length - 1)];
-        result.push([{coordinates: prev, name: await getAddress(prev)}, {
-            coordinates: cur,
-            name: await getAddress(cur)
+        result.push([{
+            coordinates: prev.map(it => it.valueOf()),
+            name: await getAddress(prev.map(it => it.valueOf()))
+        }, {
+            coordinates: cur.map(it => it.valueOf()),
+            name: await getAddress(cur.map(it => it.valueOf()))
         }]);
         prev = cur;
     }
     const last = coords[coords.length - 1];
-    result.push([{coordinates: prev, name: await getAddress(prev)}, {
-        coordinates: last,
+    result.push([{coordinates: prev.map(it => it.valueOf()), name: await getAddress(prev.map(it => it.valueOf()))}, {
+        coordinates: last.map(it => it.valueOf()),
         name: await getAddress(last.map(n => n.valueOf()))
     }]);
     return result;
 }
 
-async function YAPIRouteToMultiRoute(route: ymaps.multiRouter.masstransit.Route): Promise<MultiRoute> {
+async function YAPIRouteToMultiRoutePublicTransport(route: ymaps.multiRouter.masstransit.Route): Promise<MultiRoute> {
     let model: ymaps.multiRouter.masstransit.RouteModel = route.model
     const path = model.getPaths()[0];
     const segments = path.getSegments();
@@ -240,8 +247,19 @@ async function YAPIRouteToMultiRoute(route: ymaps.multiRouter.masstransit.Route)
                 return {name: it.name, type: it.type}
             }),
             // @ts-ignore
-            text: segment.properties.get("text",""),
+            text: segment.properties.get("text", ""),
         }, TransportType.publicTransport));
+    return new MultiRoute(routes);
+}
+
+async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): Promise<MultiRoute> {
+    // @ts-ignore
+    let model: ymaps.multiRouter.driving.RouteModel = route.model
+    const path = model.getPaths()[0];
+    const segments = path.getSegments();
+    const bounds = await getBounds(segments, path);
+    const routes = segments.map((segment, index) =>
+        new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.publicTransport));
     return new MultiRoute(routes);
 }
 
