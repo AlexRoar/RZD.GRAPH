@@ -22,19 +22,35 @@ interface RequestParams {
 }
 
 class MultiRoute {
-    duration: number = 0
+    duration: number
     distance: number = 0
     price: number = 0
     hiddenPrice: number = 0
 
     path: Route[] = []
 
-    constructor() {
+    constructor(duration: number, distance: number, path: Route[]) {
+        this.duration = duration
+        this.distance = distance
+        this.path = path
 
+        this.calcParameters()
     }
 
     private calcParameters() {
+        this.price = 0
+        this.hiddenPrice = 0
 
+        for (const routePart of this.path) {
+            this.price += routePart.price
+        }
+    }
+
+    public countType(type: TransportType): number {
+        return this.path.map((value) => {
+            return (value.type == type) ? 1 : 0 as number
+        })
+            .reduce(((previousValue, currentValue) => previousValue + currentValue))
     }
 }
 
@@ -47,15 +63,51 @@ interface TrainSchedule {
 
 }
 
-interface Route {
-    duration: number
-    distance: number
-    price: number
-    hiddenPrice: number
+class Route {
+    private rates = {
+        simpleCar: 9,
+        cargoCar: 11,
+        driver: 480,
+        worker: 710
+    }
 
-    startPoint: RoutePoint
-    endPoint: RoutePoint
-    info: object
+    duration: number = 0
+    distance: number = 0
+    price: number = 0
+    hiddenPrice: number = 0
+
+    startPoint: RoutePoint = {coordinates: {lat: 0, lon: 0}, name: ""}
+    endPoint: RoutePoint = {coordinates: {lat: 0, lon: 0}, name: ""}
+    info: object = {}
+    type: TransportType = TransportType.car
+
+    constructor(duration: number,
+                distance: number,
+                startPoint: RoutePoint,
+                endPoint: RoutePoint,
+                info: object = {},
+                type: TransportType) {
+        this.duration = duration
+        this.distance = distance
+        this.startPoint = startPoint
+        this.endPoint = endPoint
+        this.info = info
+        this.type = type
+
+        this.price += this.duration * this.rates.worker / 60
+        switch (this.type) {
+            case TransportType.car: {
+                this.price += this.distance * this.rates.simpleCar
+                this.price += this.duration * this.rates.driver / 60
+
+            }
+            case TransportType.train:
+            case TransportType.publicTransport:
+            case TransportType.pedestrian: {
+                //the same
+            }
+        }
+    }
 }
 
 class PossibleRoutes {
@@ -66,7 +118,26 @@ class PossibleRoutes {
     others: MultiRoute[] = []
 
     constructor(allRoutes: MultiRoute[]) {
+        if (allRoutes.length == 0)
+            return
 
+        allRoutes = allRoutes.sort((a, b) => a.duration - b.duration)
+        this.fast = allRoutes[0]
+        allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.pedestrian) - a.countType(TransportType.pedestrian))
+        allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.train) - a.countType(TransportType.train))
+        allRoutes = allRoutes.sort((a, b) => a.price - b.price)
+        this.cheap = allRoutes[0]
+        this.others = allRoutes
+        let transitionsMax = 4
+
+        while (this.best === undefined) {
+            const filtered = allRoutes.filter((value) => value.path.length < transitionsMax)
+            if (filtered.length) {
+                transitionsMax++
+                continue;
+            }
+            this.best = filtered[0]
+        }
     }
 }
 
@@ -90,8 +161,7 @@ type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit
 function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
     let YaRoutes = getYAMultiRoutes(waypoints, params);
 
-
-
+    return new PossibleRoutes([])
 }
 
 function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise<YAPIRoute[]> {
@@ -130,11 +200,11 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise
  * @param userPoint user's location
  * @param range in degrees
  */
-function getStations(userPoint: GeoLocation, range: number): YAPISearchControlEntity[] {
+async function getStations(userPoint: GeoLocation, range: number = 0.1): Promise<YAPISearchControlEntity[]> {
     const searchControl = new ymaps.control.SearchControl({
         options: {
             provider: 'yandex#search',
-            boundedBy: [[userPoint.lat - range, userPoint.lon - range], [userPoint.lat + range, userPoint.lon + range]]
+            boundedBy: [[userPoint.lat - range, userPoint.lon - range], [userPoint.lat + range, userPoint.lon + range]],
         }
     });
 
@@ -143,14 +213,18 @@ function getStations(userPoint: GeoLocation, range: number): YAPISearchControlEn
     let allResults: YAPISearchControlEntity[] = []
 
     for (const searchString of findStations) {
-        searchControl.search(searchString).then(function () {
-            const geoObjectsArray = searchControl.getResultsArray();
-            allResults = allResults.concat(geoObjectsArray as YAPISearchControlEntity[])
-        });
-    }
+        await searchControl.search(searchString)
+        const geoObjectsArray = searchControl.getResultsArray();
+        allResults = allResults.concat(geoObjectsArray as YAPISearchControlEntity[])
 
+    }
+    // console.log(allResults)
     allResults = allResults.filter((element, index) => {
         for (const discriminator of namesDiscriminator) {
+            if (!element.properties._data.categoriesText) {
+                // console.log(element)
+                return false
+            }
             for (const catWord of element.properties._data.categoriesText.split(' ')) {
                 if (catWord.toLowerCase().includes(discriminator.toLowerCase())) {
                     return true
@@ -178,3 +252,82 @@ function getSchedule(firstStation: string, secondStation: string, date: Date): T
     });
 }
 
+
+const mockData: PossibleRoutes = new PossibleRoutes([
+    new MultiRoute(115, 150, [
+        new Route(115, 150,
+            {
+                name: "Транспортная улица, 20В",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "посёлок городского типа Березовка",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 115
+            }, TransportType.car)
+    ]),
+    new MultiRoute(110, 98, [
+        new Route(115, 0.520,
+            {
+                name: "Транспортная улица, 20В",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "Саянская",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 115
+            }, TransportType.pedestrian),
+        new Route(210, 0,
+            {
+                name: "Саянская",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "Красноярск-Пасс.",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 210
+            }, TransportType.pedestrian),
+        new Route(17, 0,
+            {
+                name: "Железнодорожный вокзал",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "Междугородный автовокзал",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 17,
+                description: "Автобус 81"
+            }, TransportType.publicTransport),
+        new Route(21, 0,
+            {
+                name: "Красноярск",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                name: "Березовка, перекресток",
+                coordinates: {
+                    lat: 0, lon: 0
+                }
+            }, {
+                duration: 21,
+                description: "Автобус Красноярск — Канск"
+            }, TransportType.publicTransport)
+    ])
+])
