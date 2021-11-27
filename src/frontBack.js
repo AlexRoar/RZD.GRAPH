@@ -26,13 +26,32 @@ class PossibleRoutes {
 function getRoutes(waypoints, params) {
 }
 function getYAMultiRoutes(waypoints, params) {
-    return [TransportType.car, TransportType.publicTransport, TransportType.pedestrian]
+    let myMap = new ymaps.Map('map', {
+        center: [55.751574, 37.573856],
+        zoom: 9,
+        controls: []
+    });
+    return Promise.all([TransportType.car, TransportType.publicTransport, TransportType.pedestrian]
         .filter(value => !params.exclusions.has(value))
-        .map(() => new ymaps.multiRouter.MultiRoute({
-        referencePoints: waypoints.map(value => value.name),
-        params: {
-            results: 1
-        }
+        .map((value) => {
+        console.log(value);
+        console.log(waypoints.map(value => value.name));
+        // @ts-ignore
+        const multiRoute = new ymaps.multiRouter.MultiRoute({
+            referencePoints: waypoints.map(value => value.name),
+            params: {
+                results: 1,
+                // @ts-ignore
+                routingMode: value
+            },
+        });
+        const result = new Promise((resolve, reject) => {
+            multiRoute.model.events.add('requestsuccess', function () {
+                resolve(multiRoute.getActiveRoute());
+            });
+        });
+        myMap.geoObjects.add(multiRoute);
+        return result;
     }));
 }
 /**
@@ -75,5 +94,10 @@ function getStations(userPoint, range) {
  * @param date
  */
 function getSchedule(firstStation, secondStation, date) {
-    return [];
+    $.ajax({
+        url: `https://kraspg.ru/r?from=${firstStation}&to=${secondStation}&date=${date.getDay()}.${date.getMonth()}.${date.getFullYear()}&search=%D0%9D%D0%B0%D0%B9%D1%82%D0%B8`,
+        success: function (result) {
+            const dom_nodes = $($.parseHTML(result));
+        }
+    });
 }
