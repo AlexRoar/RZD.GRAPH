@@ -79,8 +79,8 @@ class Route {
     public price: number = 0
     public hiddenPrice: number = 0
 
-    public startPoint: RoutePoint = {coordinates: {lat: 0, lon: 0}, name: ""}
-    public endPoint: RoutePoint = {coordinates: {lat: 0, lon: 0}, name: ""}
+    public startPoint: RoutePoint = {coordinates: [0, 0], name: ""}
+    public endPoint: RoutePoint = {coordinates: [0, 0], name: ""}
     public info: object = {}
     public type: TransportType = TransportType.car
 
