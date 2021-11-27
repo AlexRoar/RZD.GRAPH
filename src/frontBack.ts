@@ -21,27 +21,30 @@ interface RequestParams {
 }
 
 class MultiRoute {
-    public duration: number
+    public duration: number = 0
     public distance: number = 0
     public price: number = 0
     public hiddenPrice: number = 0
 
     public path: Route[] = []
 
-    constructor(duration: number, distance: number, path: Route[]) {
-        this.duration = duration
-        this.distance = distance
+    constructor(path: Route[]) {
         this.path = path
-
         this.calcParameters()
     }
 
     private calcParameters() {
         this.price = 0
         this.hiddenPrice = 0
+        this.duration = 0
+        this.distance = 0
 
+        console.log("New calc")
         for (const routePart of this.path) {
+            console.log(routePart)
             this.price += routePart.price
+            this.duration += routePart.duration
+            this.distance += routePart.distance
         }
     }
 
@@ -126,12 +129,27 @@ class PossibleRoutes {
         allRoutes = allRoutes.sort((a, b) => a.countType(TransportType.publicTransport) - a.countType(TransportType.publicTransport))
         allRoutes = allRoutes.sort((a, b) => a.price - b.price)
         this.cheap = allRoutes[0]
-        allRoutes = allRoutes.sort((a, b) => a.path.length - b.path.length)
+        const maxPrice = allRoutes.reduce(function (a, b) {
+            return Math.max(a, b.price);
+        }, 0);
+        const maxTime = allRoutes.reduce(function (a, b) {
+            return Math.max(a, b.duration);
+        }, 0);
+        const maxPath = allRoutes.reduce(function (a, b) {
+            return Math.max(a, b.path.length);
+        }, 0);
+        allRoutes = allRoutes.sort((a, b) => {
+            let res = 0
+            res += (a.path.length - b.path.length) * 0.2 / maxPath
+            res += (a.price - b.price) * 0.8 / maxPrice
+            res += (a.duration - b.duration) * 0.5 / maxTime
+            return res
+        })
         this.others = allRoutes
         this.best = allRoutes[0]
 
         let carOnly = allRoutes.filter((a) => a.countType(TransportType.car) == a.path.length)
-        if(carOnly.length)
+        if (carOnly.length)
             this.car = carOnly[0]
     }
 }
@@ -197,8 +215,8 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise
 
 
 const mockData: PossibleRoutes = new PossibleRoutes([
-    new MultiRoute(115, 150, [
-        new Route(115, 150,
+    new MultiRoute([
+        new Route(123, 180,
             {
                 name: "Транспортная улица, 20В",
                 coordinates: {
@@ -209,12 +227,10 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                 coordinates: {
                     lat: 0, lon: 0
                 }
-            }, {
-                duration: 115
-            }, TransportType.car)
+            }, {}, TransportType.car)
     ]),
-    new MultiRoute(110, 98, [
-        new Route(115, 0.520,
+    new MultiRoute([
+        new Route(10, 0.520,
             {
                 name: "Транспортная улица, 20В",
                 coordinates: {
@@ -225,10 +241,8 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                 coordinates: {
                     lat: 0, lon: 0
                 }
-            }, {
-                duration: 115
-            }, TransportType.pedestrian),
-        new Route(170, 0,
+            }, {}, TransportType.pedestrian),
+        new Route(170, 40,
             {
                 name: "Саянская",
                 coordinates: {
@@ -240,10 +254,9 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                     lat: 0, lon: 0
                 }
             }, {
-                duration: 170,
                 description: "Электричка А — Б"
             }, TransportType.publicTransport),
-        new Route(17, 0,
+        new Route(17, 5,
             {
                 name: "Железнодорожный вокзал",
                 coordinates: {
@@ -255,10 +268,9 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                     lat: 0, lon: 0
                 }
             }, {
-                duration: 17,
                 description: "Автобус 81"
             }, TransportType.publicTransport),
-        new Route(21, 0,
+        new Route(21, 4,
             {
                 name: "Красноярск",
                 coordinates: {
@@ -270,12 +282,11 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                     lat: 0, lon: 0
                 }
             }, {
-                duration: 21,
                 description: "Автобус Красноярск — Канск"
             }, TransportType.publicTransport)
     ]),
-    new MultiRoute(110, 98, [
-        new Route(1071, 0,
+    new MultiRoute([
+        new Route(101, 60,
             {
                 name: "Транспортная улица, 20В",
                 coordinates: {
@@ -286,10 +297,8 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                 coordinates: {
                     lat: 0, lon: 0
                 }
-            }, {
-                duration: 115
-            }, TransportType.pedestrian),
-        new Route(170, 0,
+            }, {}, TransportType.pedestrian),
+        new Route(17, 12,
             {
                 name: "Саянская",
                 coordinates: {
@@ -301,9 +310,9 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                     lat: 0, lon: 0
                 }
             }, {
-                duration: 170
+                description: "Электричка А — Б"
             }, TransportType.publicTransport),
-        new Route(17, 0,
+        new Route(17, 5,
             {
                 name: "Железнодорожный вокзал",
                 coordinates: {
@@ -315,10 +324,9 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                     lat: 0, lon: 0
                 }
             }, {
-                duration: 17,
                 description: "Автобус 81"
             }, TransportType.publicTransport),
-        new Route(21, 0,
+        new Route(21, 8,
             {
                 name: "Красноярск",
                 coordinates: {
@@ -330,7 +338,6 @@ const mockData: PossibleRoutes = new PossibleRoutes([
                     lat: 0, lon: 0
                 }
             }, {
-                duration: 21,
                 description: "Автобус Красноярск — Канск"
             }, TransportType.publicTransport)
     ])

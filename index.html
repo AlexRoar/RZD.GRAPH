@@ -82,8 +82,8 @@
 
             if (priceUp > 0) {
                 $('#price-better').html(
-                    "<p><span class=\"accent\">{0}</span> {1}</p>" +
-                    "<p>Экономия за поездку</p>".format(
+                    ("<p><span class=\"accent\">{0}</span> {1}</p>" +
+                    "<p>Экономия за поездку</p>").format(
                         Math.round(priceUp),
                         "рублей"
                     ))
@@ -94,14 +94,14 @@
 
             if (timeUp > 0) {
                 $('#time-better').html(
-                    "<p><span class=\"accent\">{0}</span> {1}</p>" +
-                    "<p>Быстрее чем просто авто</p>".format(
+                    ("<p><span class=\"accent\">{0}</span> {1}</p>" +
+                    "<p>Быстрее,чем просто авто</p>").format(
                         Math.round(timeUp),
                         "минут"
                     ))
             } else {
                 $('#time-better').html(
-                    "<p>Кажется, на авто дешевле</p>")
+                    "<p>Кажется, на авто быстрее</p>")
             }
 
             let pathDetails = ""
