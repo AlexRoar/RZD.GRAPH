@@ -75,6 +75,22 @@ class MultiRoute {
                 if (fromSpecial.cheap)
                     special.push(new MultiRoute(fromStart.concat(fromSpecial.cheap.path)));
             }
+            let ToEnd = await getAutoRoute([specialPoint, this.path[this.path.length - 1].startPoint.coordinates]);
+            if (ToEnd !== null) {
+                let toSpecial = await getRoutes([this.path[this.path.length - 1].endPoint, {name: await getAddress(specialPoint)}], {
+                    datetime: DATE,
+                    exclusions: new Set()
+                });
+                if (toSpecial.best)
+                    special.push(new MultiRoute(toSpecial.best.path.concat(ToEnd)));
+
+                if (toSpecial.fast)
+                    special.push(new MultiRoute(toSpecial.fast.path.concat(ToEnd)));
+
+                if (toSpecial.cheap)
+                    special.push(new MultiRoute(toSpecial.cheap.path.concat(ToEnd)));
+            }
+
         }
 
         return special
