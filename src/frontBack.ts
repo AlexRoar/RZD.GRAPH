@@ -146,7 +146,32 @@ interface YAPISearchControlEntity {
     }
 }
 
-type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit.Route | object
+interface YAPIPedestrianRoute {
+    properties: IDataManager;
+}
+
+type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit.Route | YAPIPedestrianRoute
+
+function YAPIRouteToMultiRoute(route: YAPIRoute): MultiRoute {
+    // @ts-ignore
+    let model: ymaps.multiRouter.driving.RouteModel = route.model
+    model.getPaths().flatMap(path => path.getSegments()).map(segment => new Route(Math.floor(segment.properties.get('duration', {
+            text: "30 мин",
+            value: 60 * 30
+            // @ts-ignore
+        }).value / 60),
+        new Route(Math.floor(segment.properties.get('distance', {
+            text: "1 км",
+            value: 1000
+            // @ts-ignore
+        }).value / 1000)), {coordinates: {lat: path.}}
+    ))
+    return new MultiRoute(Math.floor(route.properties.get('duration', {
+        text: "30 мин",
+        value: 60 * 30
+        // @ts-ignore
+    }).value / 60), Math.floor(route.properties.get('distance', {text: "1 км", value: 1000}).value / 1000), []);
+}
 
 function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
     let YaRoutes = getYAMultiRoutes(waypoints, params);
@@ -183,63 +208,6 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise
             myMap.geoObjects.add(multiRoute);
             return result;
         }));
-}
-
-/**
- * Get railway stations nearby userPoint location
- * @param userPoint user's location
- * @param range in degrees
- */
-async function getStations(userPoint: GeoLocation, range: number = 0.1): Promise<YAPISearchControlEntity[]> {
-    const searchControl = new ymaps.control.SearchControl({
-        options: {
-            provider: 'yandex#search',
-            boundedBy: [[userPoint.lat - range, userPoint.lon - range], [userPoint.lat + range, userPoint.lon + range]],
-        }
-    });
-
-    const namesDiscriminator = new Set<string>(['железнодорож', 'вокзал', 'станция'])
-    const findStations = new Set<string>(['железнодорожная', 'станция', 'платформа'])
-    let allResults: YAPISearchControlEntity[] = []
-
-    for (const searchString of findStations) {
-        await searchControl.search(searchString)
-        const geoObjectsArray = searchControl.getResultsArray();
-        allResults = allResults.concat(geoObjectsArray as YAPISearchControlEntity[])
-
-    }
-    // console.log(allResults)
-    allResults = allResults.filter((element, index) => {
-        for (const discriminator of namesDiscriminator) {
-            if (!element.properties._data.categoriesText) {
-                // console.log(element)
-                return false
-            }
-            for (const catWord of element.properties._data.categoriesText.split(' ')) {
-                if (catWord.toLowerCase().includes(discriminator.toLowerCase())) {
-                    return true
-                }
-            }
-        }
-        return false
-    })
-
-    return allResults;
-}
-
-/**
- *
- * @param firstStation
- * @param secondStation
- * @param date
- */
-function getSchedule(firstStation: string, secondStation: string, date: Date): TrainSchedule[] /* TODO */ {
-    $.ajax({
-        url: `https://kraspg.ru/r?from=${firstStation}&to=${secondStation}&date=${date.getDay()}.${date.getMonth()}.${date.getFullYear()}&search=%D0%9D%D0%B0%D0%B9%D1%82%D0%B8`,
-        success: function (result) {
-            const dom_nodes = $($.parseHTML(result));
-        }
-    });
 }
 
 
