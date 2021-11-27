@@ -23,12 +23,14 @@ class MultiRoute {
     public distance: number = 0
     public price: number = 0
     public hiddenPrice: number = 0
+    public isCar: boolean = false
 
     public path: Route[] = []
 
-    constructor(path: Route[]) {
-        this.path = path
-        this.calcParameters()
+    constructor(path: Route[], isCar: boolean = false) {
+        this.path = path;
+        this.isCar = isCar;
+        this.calcParameters();
     }
 
     private calcParameters() {
@@ -307,7 +309,7 @@ async function YAPIRouteToMultiRoutePublicTransport(route: ymaps.multiRouter.mas
             // @ts-ignore
             text: segment.properties.get("text", ""),
         }, TransportType.publicTransport));
-    return new MultiRoute(routes);
+    return new MultiRoute(routes, false);
 }
 
 async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): Promise<MultiRoute> {
@@ -318,7 +320,7 @@ async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): 
     const bounds = await getBounds(segments, path);
     const routes = segments.map((segment, index) =>
         new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.car));
-    return new MultiRoute(routes);
+    return new MultiRoute(routes, true);
 }
 
 async function getRoutes(waypoints: WayPoint[], params: RequestParams): Promise<PossibleRoutes> {
