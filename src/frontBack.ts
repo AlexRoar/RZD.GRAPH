@@ -5,6 +5,8 @@ interface WayPoint {
     name: string
 }
 
+let DATE = new Date();
+
 type GeoLocation = number[]
 
 enum TransportType {
@@ -56,21 +58,22 @@ class MultiRoute {
     }
 
     async expandSpecialPoints(): Promise<MultiRoute[]> {
+        if (!this.isCar) return [];
         let special: MultiRoute[] = []
 
         for (const specialPoint of specialPoints) {
-            for (let i = 0; i < this.path.length; i++) {
-                for (let j = i; j < this.path.length; j++) {
-                    let firstPart = await getAutoRoute([
-                        this.path[i].startPoint.coordinates,
-                        specialPoint,
-                        this.path[j].endPoint.coordinates
-                    ])
-                    if (firstPart === null)
-                        continue
-                    const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
-                    special.push(new MultiRoute(pathFinal))
-                }
+            let fromStart = await getAutoRoute([this.path[0].startPoint.coordinates, specialPoint]);
+            if (fromStart !== null) {
+                let fromSpecial = await getRoutes([{name: await getAddress(specialPoint)}, this.path[this.path.length - 1].endPoint], {
+                    datetime: DATE,
+                    exclusions: new Set()
+                });
+                if (fromSpecial.best)
+                    special.push(new MultiRoute(fromStart.concat(fromSpecial.best.path)));
+                if (fromSpecial.fast)
+                    special.push(new MultiRoute(fromStart.concat(fromSpecial.fast.path)));
+                if (fromSpecial.cheap)
+                    special.push(new MultiRoute(fromStart.concat(fromSpecial.cheap.path)));
             }
         }
 
