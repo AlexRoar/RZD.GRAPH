@@ -241,6 +241,38 @@ const specialPoints: GeoLocation[] = [
     [55.545684, 94.702848], // Саянская
 ];
 
+function simplifyMultiRoute(mRoute: MultiRoute): MultiRoute {
+    const paths = mRoute.path;
+    if (paths.length == 0) return mRoute;
+    let newPath = [];
+    let isPrevCar = paths[0].type === TransportType.car;
+    let prev: Route = paths[0];
+    for (let i = 1; i < paths.length; i++) {
+        if (paths[i].type !== TransportType.car) {
+            if (isPrevCar) {
+                newPath.push(prev);
+            }
+            prev = paths[i];
+            isPrevCar = false;
+            newPath.push(paths[i]);
+            continue;
+        }
+        if (isPrevCar) {
+            prev = new Route(paths[i].duration + prev.duration,
+                paths[i].distance + prev.distance, prev.startPoint,
+                paths[i].endPoint, {}, TransportType.car);
+        } else {
+            isPrevCar = true;
+            prev = paths[i];
+        }
+    }
+    if (isPrevCar) {
+        newPath.push(prev);
+    }
+    mRoute.path = newPath;
+    return mRoute;
+}
+
 function getDistance(segment: SegmentModel): number {
     // @ts-ignore
     return segment.properties.get('distance', {
