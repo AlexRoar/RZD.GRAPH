@@ -194,22 +194,55 @@ function getDuration(segment: SegmentModel): number {
     }).value / 60);
 }
 
-function getBounds(segments: SegmentModel[], path: ymaps.multiRouter.masstransit.PathModel): RoutePoint[][] {
+function getAddress(coords: number[]): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        // @ts-ignore
+        ymaps.geocode(coords).then(function (res) {
+            const firstGeoObject = res.geoObjects.get(0);
+            resolve(firstGeoObject.getAddressLine());
+        });
+    });
+}
+
+
+async function getBounds(segments: SegmentModel[], path: ymaps.multiRouter.masstransit.PathModel): Promise<RoutePoint[][]> {
     const coords: Number[][] = path.properties.get("coordinates", []) as Number[][];
     const result: RoutePoint[][] = [];
     // @ts-ignore
-    const prev = coords[segments[0].properties.get("lodIndex", 0)];
+    let prev = coords[segments[0].properties.get("lodIndex", 0)];
+
     for (const segment of segments.slice(1)) {
-        result.push([{coordinates: prev, name: ymaps.geocode()},])
+        // @ts-ignore
+        const cur = coords[segment.properties.get("lodIndex", coords.length - 1)];
+        result.push([{coordinates: prev, name: await getAddress(prev)}, {
+            coordinates: cur,
+            name: await getAddress(cur)
+        }]);
+        prev = cur;
     }
+    const last = coords[coords.length - 1];
+    result.push([{coordinates: prev, name: await getAddress(prev)}, {
+        coordinates: last,
+        name: await getAddress(last.map(n => n.valueOf()))
+    }]);
+    return result;
 }
 
-function YAPIRouteToMultiRoute(route: ymaps.multiRouter.masstransit.Route): MultiRoute {
+async function YAPIRouteToMultiRoute(route: ymaps.multiRouter.masstransit.Route): Promise<MultiRoute> {
     let model: ymaps.multiRouter.masstransit.RouteModel = route.model
     const path = model.getPaths()[0];
     const segments = path.getSegments();
-    const bounds = getBounds(segments, path);
-    segments.map(segment => new Route(getDuration(segment), getDistance(segment),);
+    const bounds = await getBounds(segments, path);
+    const routes = segments.map((segment, index) =>
+        new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {
+            // @ts-ignore
+            transports: segment.properties.get("transports", []).map((it: { name: string; type: string; }) => {
+                return {name: it.name, type: it.type}
+            }),
+            // @ts-ignore
+            text: segment.properties.get("text",""),
+        }, TransportType.publicTransport));
+    return new MultiRoute(routes);
 }
 
 function getRoutes(waypoints: WayPoint[], params: RequestParams): PossibleRoutes {
@@ -242,6 +275,7 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise
 
 
 function getAutoRoute(start: GeoLocation, end: GeoLocation): Promise<YAPIRoute> {
+    // @ts-ignore
     const multiRoute = new ymaps.multiRouter.MultiRoute({
         referencePoints: [
             start,
