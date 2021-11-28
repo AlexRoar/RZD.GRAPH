@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-let DATE = new Date();
 var TransportType;
 (function (TransportType) {
     TransportType["publicTransport"] = "masstransit";
@@ -8,16 +7,23 @@ var TransportType;
     TransportType["pedestrian"] = "pedestrian";
 })(TransportType || (TransportType = {}));
 class MultiRoute {
-    constructor(path, isCar = false) {
+    constructor(path, isCar = false, yapi = []) {
         this.duration = 0;
         this.distance = 0;
         this.price = 0;
         this.hiddenPrice = 0;
         this.isCar = false;
         this.path = [];
+        this.yapi = [];
         this.path = path;
         this.isCar = isCar;
+        this.yapi = yapi;
         this.calcParameters();
+    }
+    show(map) {
+        for (let route of this.yapi) {
+            map.geoObjects.add(route);
+        }
     }
     calcParameters() {
         this.price = 0;
@@ -42,7 +48,9 @@ class MultiRoute {
         let special = [];
         for (const specialPoint of specialPoints) {
             let fromStart = await getAutoRoute([this.path[0].startPoint.coordinates, specialPoint]);
+            console.log("fromStart", [this.path[0].startPoint.coordinates, specialPoint]);
             if (fromStart !== null) {
+                console.log("enter");
                 let fromSpecial = await getRoutes([{ name: await getAddress(specialPoint) }, this.path[this.path.length - 1].endPoint], {
                     datetime: DATE,
                     exclusions: new Set()
@@ -50,19 +58,25 @@ class MultiRoute {
                 for (const partial of fromSpecial.others) {
                     if (!partial)
                         continue;
-                    special.push(new MultiRoute(fromStart.concat(partial.path)));
+                    if (partial.path.length === 0)
+                        continue;
+                    special.push(new MultiRoute(fromStart.path.concat(partial.path), false, fromStart.yapi.concat(partial.yapi)));
                 }
             }
             let toEnd = await getAutoRoute([specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
+            console.log("toEnd", [specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
             if (toEnd !== null) {
-                let toSpecial = await getRoutes([this.path[this.path.length - 1].endPoint, { name: await getAddress(specialPoint) }], {
+                let toSpecial = await getRoutes([this.path[0].endPoint, { name: await getAddress(specialPoint) }], {
                     datetime: DATE,
                     exclusions: new Set()
                 });
                 for (const partial of toSpecial.others) {
                     if (!partial)
                         continue;
-                    special.push(new MultiRoute(partial.path.concat(toEnd)));
+                    console.log("PArt", partial.path, toEnd);
+                    if (partial.path.length === 0)
+                        continue;
+                    special.push(new MultiRoute(partial.path.concat(toEnd.path), false, toEnd.yapi.concat(partial.yapi)));
                 }
             }
         }
@@ -100,8 +114,8 @@ class MultiRoute {
             if (firstPart === null)
                 continue;
             console.log(firstPart);
-            const pathFinal = this.path.slice(0, segment[0]).concat(firstPart).concat(this.path.slice(segment[1] + 1));
-            expanded.push(new MultiRoute(pathFinal, true));
+            const pathFinal = this.path.slice(0, segment[0]).concat(firstPart.path).concat(this.path.slice(segment[1] + 1));
+            expanded.push(new MultiRoute(pathFinal, false)); // todo mb crash
         }
         console.log(expanded);
         return expanded;
@@ -189,10 +203,17 @@ class PossibleRoutes {
             this.car = carOnly[0];
     }
 }
+let DATE = new Date();
 const specialPoints = [
     [55.805913, 94.329253],
     [55.545684, 94.702848], // Саянская
 ];
+const cache = window.localStorage;
+if (!cache.ways)
+    cache.ways = new Map();
+function clearCache() {
+    cache.ways = new Map();
+}
 function simplifyMultiRoute(mRoute) {
     const paths = mRoute.path;
     if (paths.length == 0)
@@ -300,15 +321,16 @@ async function YAPIRouteToMultiRoutePublicTransport(route) {
         // @ts-ignore
         text: segment.properties.get("text", ""),
     }, TransportType.publicTransport));
-    return new MultiRoute(routes, false);
+    return new MultiRoute(routes, false, [route]);
 }
 async function YAPIRouteToMultiDriving(route) {
+    cache;
     let model = route.model;
     const path = model.getPaths()[0];
     const segments = path.getSegments();
     const bounds = await getBounds(segments, path);
     const routes = segments.map((segment, index) => new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.car));
-    return new MultiRoute(routes, true);
+    return new MultiRoute(routes, true, [route]);
 }
 async function getRoutes(waypoints, params) {
     let YaRoutes = await getYAMultiRoutes(waypoints, params);
@@ -372,97 +394,8 @@ function getAutoRoute(points) {
                 return;
             }
             YAPIRouteToMultiDriving(route).then((value) => {
-                resolve(value.path);
+                resolve(value);
             });
         });
     });
 }
-let mockData;
-ymaps.ready(() => {
-    mockData = new PossibleRoutes([
-        new MultiRoute([
-            new Route(123, 180, {
-                name: "Транспортная улица, 20В",
-                coordinates: [0, 0]
-            }, {
-                name: "посёлок городского типа Березовка",
-                coordinates: [0, 0]
-            }, {}, TransportType.car)
-        ]),
-        new MultiRoute([
-            new Route(10, 0.520, {
-                name: "Транспортная улица, 20В",
-                coordinates: [0, 0]
-            }, {
-                name: "Саянская",
-                coordinates: [0, 0]
-            }, {}, TransportType.pedestrian),
-            new Route(170, 40, {
-                name: "Саянская",
-                coordinates: [0, 0]
-            }, {
-                name: "Красноярск-Пасс.",
-                coordinates: [0, 0]
-            }, {
-                description: "Электричка А — Б"
-            }, TransportType.publicTransport),
-            new Route(17, 5, {
-                name: "Железнодорожный вокзал",
-                coordinates: [0, 0]
-            }, {
-                name: "Междугородный автовокзал",
-                coordinates: [0, 0]
-            }, {
-                description: "Автобус 81"
-            }, TransportType.publicTransport),
-            new Route(21, 4, {
-                name: "Красноярск",
-                coordinates: [0, 0]
-            }, {
-                name: "Березовка, перекресток",
-                coordinates: [0, 0]
-            }, {
-                description: "Автобус Красноярск — Канск"
-            }, TransportType.publicTransport)
-        ]),
-        new MultiRoute([
-            new Route(101, 60, {
-                name: "Транспортная улица, 20В",
-                coordinates: [0, 0]
-            }, {
-                name: "Саянская",
-                coordinates: [0, 0]
-            }, {}, TransportType.pedestrian),
-            new Route(17, 12, {
-                name: "Саянская",
-                coordinates: [0, 0]
-            }, {
-                name: "Красноярск-Пасс.",
-                coordinates: [0, 0]
-            }, {
-                description: "Электричка А — Б"
-            }, TransportType.publicTransport),
-            new Route(17, 5, {
-                name: "Железнодорожный вокзал",
-                coordinates: [0, 0]
-            }, {
-                name: "Междугородный автовокзал",
-                coordinates: [0, 0]
-            }, {
-                description: "Автобус 81"
-            }, TransportType.publicTransport),
-            new Route(21, 8, {
-                name: "Красноярск",
-                coordinates: [0, 0]
-            }, {
-                name: "Березовка, перекресток",
-                coordinates: [0, 0]
-            }, {
-                description: "Автобус Красноярск — Канск"
-            }, TransportType.publicTransport)
-        ])
-    ]);
-    mockData.build().then(r => {
-        console.log("Builded mock");
-    });
-});

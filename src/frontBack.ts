@@ -5,8 +5,6 @@ interface WayPoint {
     name: string
 }
 
-let DATE = new Date(2021, 11, 29, 12, 0, 0, 0);
-
 type GeoLocation = number[]
 
 enum TransportType {
@@ -71,7 +69,7 @@ class MultiRoute {
 
         for (const specialPoint of specialPoints) {
             let fromStart = await getAutoRoute([this.path[0].startPoint.coordinates, specialPoint]);
-            console.log("try");
+            console.log("fromStart", [this.path[0].startPoint.coordinates, specialPoint]);
             if (fromStart !== null) {
                 console.log("enter");
                 let fromSpecial = await getRoutes([{name: await getAddress(specialPoint)}, this.path[this.path.length - 1].endPoint], {
@@ -81,18 +79,22 @@ class MultiRoute {
                 for (const partial of fromSpecial.others) {
                     if (!partial)
                         continue
+                    if (partial.path.length === 0) continue;
                     special.push(new MultiRoute(fromStart.path.concat(partial.path), false, fromStart.yapi.concat(partial.yapi)))
                 }
             }
             let toEnd = await getAutoRoute([specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
+            console.log("toEnd", [specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
             if (toEnd !== null) {
-                let toSpecial = await getRoutes([this.path[this.path.length - 1].endPoint, {name: await getAddress(specialPoint)}], {
+                let toSpecial = await getRoutes([this.path[0].endPoint, {name: await getAddress(specialPoint)}], {
                     datetime: DATE,
                     exclusions: new Set()
                 });
                 for (const partial of toSpecial.others) {
                     if (!partial)
                         continue
+                    console.log("PArt", partial.path, toEnd);
+                    if (partial.path.length === 0) continue;
                     special.push(new MultiRoute(partial.path.concat(toEnd.path), false, toEnd.yapi.concat(partial.yapi)))
                 }
             }
@@ -295,7 +297,7 @@ interface APICache {
 }
 
 const cache = window.localStorage as unknown as APICache
-if(!cache.ways)
+if (!cache.ways)
     cache.ways = new Map()
 
 function clearCache() {
