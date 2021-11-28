@@ -108,7 +108,7 @@ header p {
     border-radius: 25px;
 }
 
-.from-search, .to-search, .when-search {
+.from-search, .to-search {
     border-right: solid 2px #C31B1C;
 }
 

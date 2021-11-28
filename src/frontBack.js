@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+let DATE = new Date();
 var TransportType;
 (function (TransportType) {
     TransportType["publicTransport"] = "masstransit";
@@ -53,7 +54,7 @@ class MultiRoute {
             console.log("fromStart", [this.path[0].startPoint.coordinates, specialPoint]);
             if (fromStart !== null) {
                 console.log("enter");
-                let fromSpecial = await getRoutes([{ name: await getAddress(specialPoint) }, this.path[this.path.length - 1].endPoint], {
+                let fromSpecial = await getRoutes([{ name: await getAddress(specialPoint) }, { name: await getAddress(this.path[this.path.length - 1].endPoint.coordinates) }], {
                     datetime: DATE,
                     exclusions: new Set()
                 });
@@ -66,9 +67,10 @@ class MultiRoute {
                 }
             }
             let toEnd = await getAutoRoute([specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
-            console.log("toEnd", [specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
+            console.log("toEnd", [specialPoint, this.path[this.path.length - 1].endPoint.coordinates], toEnd);
             if (toEnd !== null) {
-                let toSpecial = await getRoutes([this.path[0].endPoint, { name: await getAddress(specialPoint) }], {
+                console.log("To special", [this.path[0].startPoint, { name: await getAddress(specialPoint) }]);
+                let toSpecial = await getRoutes([{ name: await getAddress(this.path[0].startPoint.coordinates) }, { name: await getAddress(specialPoint) }], {
                     datetime: DATE,
                     exclusions: new Set()
                 });
@@ -126,10 +128,10 @@ class MultiRoute {
 class Route {
     constructor(duration, distance, startPoint, endPoint, info = {}, type) {
         this.rates = {
-            simpleCar: 9,
+            simpleCar: 10,
             cargoCar: 11,
-            driver: 480,
-            worker: 710
+            driver: 490,
+            worker: 700
         };
         this.duration = 0;
         this.distance = 0;
@@ -164,7 +166,21 @@ class PossibleRoutes {
         this.others = [];
         if (allRoutes.length == 0)
             return;
-        this.others = allRoutes;
+        const start = allRoutes[0].path[0].startPoint.coordinates;
+        const end = allRoutes[0].path[allRoutes[0].path.length - 1].endPoint.coordinates;
+        const cacheKey = createCacheKey(start, end);
+        console.log("CACHE", cacheKey);
+        const cached = cache.hardCache[cacheKey];
+        if (cached) {
+            this.others = cached.others;
+            this.car = cached.car;
+            this.best = cached.best;
+            this.fast = cached.fast;
+            this.cheap = cached.cheap;
+        }
+        else {
+            this.others = allRoutes;
+        }
     }
     async imitateBetterWays(allRoutes) {
         let resultWays = allRoutes;
@@ -175,6 +191,11 @@ class PossibleRoutes {
         return resultWays;
     }
     async build() {
+        if (this.best)
+            return;
+        const start = this.others[0].path[0].startPoint.coordinates;
+        const end = this.others[0].path[this.others[0].path.length - 1].endPoint.coordinates;
+        const cacheKey = createCacheKey(start, end);
         let allRoutes = this.others.concat(await this.imitateBetterWays(this.others));
         allRoutes = allRoutes.sort((a, b) => a.duration - b.duration);
         this.fast = allRoutes[0];
@@ -203,18 +224,38 @@ class PossibleRoutes {
         let carOnly = allRoutes.filter((a) => a.countType(TransportType.car) == a.path.length);
         if (carOnly.length)
             this.car = carOnly[0];
+        // @ts-ignore
+        // cache.hardCache[cacheKey] = this
+        // saveCache()
     }
 }
-let DATE = new Date();
 const specialPoints = [
     [55.805913, 94.329253],
-    [55.545684, 94.702848], // Саянская
+    [55.545684, 94.702848],
+    [56.005599, 92.830408] // Красноярск
 ];
-const cache = window.localStorage;
-if (!cache.ways)
-    cache.ways = new Map();
+const _cache = window.localStorage;
+const cache = {};
+if (!_cache.ways)
+    cache.ways = {};
+else
+    cache.ways = JSON.parse(_cache._ways);
+if (!_cache.hardCache)
+    cache.hardCache = {};
+else
+    cache.hardCache = JSON.parse(_cache._hardCache);
+saveCache();
+function saveCache() {
+    _cache._ways = JSON.stringify(cache.ways);
+    _cache._hardCache = JSON.stringify(cache.hardCache);
+}
 function clearCache() {
-    cache.ways = new Map();
+    cache.ways = {};
+    cache.hardCache = {};
+    saveCache();
+}
+function createCacheKey(start, end) {
+    return start.join(",") + "—" + end.join(",");
 }
 function simplifyMultiRoute(mRoute) {
     const paths = mRoute.path;
@@ -326,7 +367,6 @@ async function YAPIRouteToMultiRoutePublicTransport(route) {
     return new MultiRoute(routes, false, [route]);
 }
 async function YAPIRouteToMultiDriving(route) {
-    cache;
     let model = route.model;
     const path = model.getPaths()[0];
     const segments = path.getSegments();

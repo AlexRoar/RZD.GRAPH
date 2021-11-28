@@ -6,6 +6,7 @@ interface WayPoint {
 }
 
 type GeoLocation = number[]
+let DATE = new Date()
 
 enum TransportType {
     publicTransport = "masstransit",
@@ -74,7 +75,7 @@ class MultiRoute {
             console.log("fromStart", [this.path[0].startPoint.coordinates, specialPoint]);
             if (fromStart !== null) {
                 console.log("enter");
-                let fromSpecial = await getRoutes([{name: await getAddress(specialPoint)}, this.path[this.path.length - 1].endPoint], {
+                let fromSpecial = await getRoutes([{name: await getAddress(specialPoint)}, {name: await getAddress(this.path[this.path.length - 1].endPoint.coordinates)}], {
                     datetime: DATE,
                     exclusions: new Set()
                 });
@@ -86,9 +87,10 @@ class MultiRoute {
                 }
             }
             let toEnd = await getAutoRoute([specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
-            console.log("toEnd", [specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
+            console.log("toEnd", [specialPoint, this.path[this.path.length - 1].endPoint.coordinates], toEnd);
             if (toEnd !== null) {
-                let toSpecial = await getRoutes([this.path[0].endPoint, {name: await getAddress(specialPoint)}], {
+                console.log("To special", [this.path[0].startPoint, {name: await getAddress(specialPoint)}])
+                let toSpecial = await getRoutes([{name: await getAddress(this.path[0].startPoint.coordinates)}, {name: await getAddress(specialPoint)}], {
                     datetime: DATE,
                     exclusions: new Set()
                 });
@@ -96,7 +98,8 @@ class MultiRoute {
                     if (!partial)
                         continue
                     console.log("PArt", partial.path, toEnd);
-                    if (partial.path.length === 0) continue;
+                    if (partial.path.length === 0)
+                        continue;
                     special.push(new MultiRoute(partial.path.concat(toEnd.path), false, toEnd.yapi.concat(partial.yapi)))
                 }
             }
@@ -156,10 +159,10 @@ interface RoutePoint {
 
 class Route {
     private rates = {
-        simpleCar: 9,
+        simpleCar: 10,
         cargoCar: 11,
-        driver: 480,
-        worker: 710
+        driver: 490,
+        worker: 700
     }
 
     public duration: number = 0
@@ -219,14 +222,31 @@ class PossibleRoutes {
         return resultWays
     }
 
-
     constructor(allRoutes: MultiRoute[]) {
         if (allRoutes.length == 0)
             return
-        this.others = allRoutes
+        const start = allRoutes[0].path[0].startPoint.coordinates
+        const end = allRoutes[0].path[allRoutes[0].path.length - 1].endPoint.coordinates
+        const cacheKey = createCacheKey(start, end)
+        console.log("CACHE", cacheKey)
+        const cached = cache.hardCache[cacheKey]
+        if (cached) {
+            this.others = cached.others
+            this.car = cached.car
+            this.best = cached.best
+            this.fast = cached.fast
+            this.cheap = cached.cheap
+        } else {
+            this.others = allRoutes
+        }
     }
 
     async build() {
+        if (this.best)
+            return
+        const start = this.others[0].path[0].startPoint.coordinates
+        const end = this.others[0].path[this.others[0].path.length - 1].endPoint.coordinates
+        const cacheKey = createCacheKey(start, end)
         let allRoutes = this.others.concat(await this.imitateBetterWays(this.others))
 
         allRoutes = allRoutes.sort((a, b) => a.duration - b.duration)
@@ -257,6 +277,10 @@ class PossibleRoutes {
         let carOnly = allRoutes.filter((a) => a.countType(TransportType.car) == a.path.length)
         if (carOnly.length)
             this.car = carOnly[0]
+
+        // @ts-ignore
+        // cache.hardCache[cacheKey] = this
+        // saveCache()
     }
 }
 
@@ -287,23 +311,47 @@ type SegmentModel =
     | ymaps.multiRouter.masstransit.WalkSegmentModel
     | ymaps.multiRouter.driving.SegmentModel
 
-let DATE = new Date();
-
 const specialPoints: GeoLocation[] = [
     [55.805913, 94.329253], // Уяр
     [55.545684, 94.702848], // Саянская
+    [56.005599, 92.830408]  // Красноярск
 ];
 
 interface APICache {
-    ways: Map<string, PossibleRoutes>
+    _ways: string
+    _hardCache: string
+    ways: object
+    hardCache: object
 }
 
-const cache = window.localStorage as unknown as APICache
-if (!cache.ways)
-    cache.ways = new Map()
+const _cache = window.localStorage as unknown as APICache
+
+const cache = {} as APICache
+
+if (!_cache.ways)
+    cache.ways = {}
+else
+    cache.ways = JSON.parse(_cache._ways)
+
+if (!_cache.hardCache)
+    cache.hardCache = {}
+else
+    cache.hardCache = JSON.parse(_cache._hardCache)
+saveCache()
+
+function saveCache() {
+    _cache._ways = JSON.stringify(cache.ways)
+    _cache._hardCache = JSON.stringify(cache.hardCache)
+}
 
 function clearCache() {
-    cache.ways = new Map()
+    cache.ways = {}
+    cache.hardCache = {}
+    saveCache()
+}
+
+function createCacheKey(start: GeoLocation, end: GeoLocation) {
+    return start.join(",") + "—" + end.join(",")
 }
 
 function simplifyMultiRoute(mRoute: MultiRoute): MultiRoute {
@@ -427,7 +475,6 @@ async function YAPIRouteToMultiRoutePublicTransport(route: ymaps.multiRouter.mas
 }
 
 async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): Promise<MultiRoute> {
-    cache
     let model: ymaps.multiRouter.driving.RouteModel = route.model
     const path = model.getPaths()[0];
     const segments = path.getSegments();
