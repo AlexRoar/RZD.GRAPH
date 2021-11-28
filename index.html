@@ -77,6 +77,7 @@
     <script>
         function activateRoute(route, tab) {
             route = simplifyMultiRoute(route)
+            route.show(myMap);
             $(".tabbed-big").removeClass("result-tab-selected")
 
             if (activeRoute.car) {

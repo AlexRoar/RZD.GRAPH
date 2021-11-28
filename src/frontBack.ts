@@ -37,9 +37,11 @@ class MultiRoute {
     }
 
     public show(map: ymaps.Map) {
+        map.geoObjects.removeAll();
         for (let route of this.yapi) {
             map.geoObjects.add(route);
         }
+        map.setBounds(map.geoObjects.getBounds()!);
     }
 
     private calcParameters() {

@@ -21,9 +21,11 @@ class MultiRoute {
         this.calcParameters();
     }
     show(map) {
+        map.geoObjects.removeAll();
         for (let route of this.yapi) {
             map.geoObjects.add(route);
         }
+        map.setBounds(map.geoObjects.getBounds());
     }
     calcParameters() {
         this.price = 0;
