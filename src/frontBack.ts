@@ -5,7 +5,7 @@ interface WayPoint {
     name: string
 }
 
-let DATE = new Date();
+let DATE = new Date(2021, 11, 29, 12, 0, 0, 0);
 
 type GeoLocation = number[]
 
@@ -29,10 +29,19 @@ class MultiRoute {
 
     public path: Route[] = []
 
-    constructor(path: Route[], isCar: boolean = false) {
+    public yapi: YAPIRoute[] = []
+
+    constructor(path: Route[], isCar: boolean = false, yapi: YAPIRoute[] = []) {
         this.path = path;
         this.isCar = isCar;
+        this.yapi = yapi;
         this.calcParameters();
+    }
+
+    public show(map: ymaps.Map) {
+        for (let route of this.yapi) {
+            map.geoObjects.add(route);
+        }
     }
 
     private calcParameters() {
@@ -58,22 +67,21 @@ class MultiRoute {
     }
 
     async expandSpecialPoints(): Promise<MultiRoute[]> {
-        if (this.isCar)
-            return [];
-
         let special: MultiRoute[] = []
 
         for (const specialPoint of specialPoints) {
             let fromStart = await getAutoRoute([this.path[0].startPoint.coordinates, specialPoint]);
+            console.log("try");
             if (fromStart !== null) {
+                console.log("enter");
                 let fromSpecial = await getRoutes([{name: await getAddress(specialPoint)}, this.path[this.path.length - 1].endPoint], {
                     datetime: DATE,
                     exclusions: new Set()
                 });
-                for(const partial of fromSpecial.others) {
-                    if(!partial)
+                for (const partial of fromSpecial.others) {
+                    if (!partial)
                         continue
-                    special.push(new MultiRoute(fromStart.concat(partial.path)))
+                    special.push(new MultiRoute(fromStart.path.concat(partial.path), false, fromStart.yapi.concat(partial.yapi)))
                 }
             }
             let toEnd = await getAutoRoute([specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
@@ -82,10 +90,10 @@ class MultiRoute {
                     datetime: DATE,
                     exclusions: new Set()
                 });
-                for(const partial of toSpecial.others) {
-                    if(!partial)
+                for (const partial of toSpecial.others) {
+                    if (!partial)
                         continue
-                    special.push(new MultiRoute(partial.path.concat(toEnd)))
+                    special.push(new MultiRoute(partial.path.concat(toEnd.path), false, toEnd.yapi.concat(partial.yapi)))
                 }
             }
 
@@ -129,8 +137,8 @@ class MultiRoute {
             if (firstPart === null)
                 continue
             console.log(firstPart)
-            const pathFinal = this.path.slice(0, segment[0]).concat(firstPart).concat(this.path.slice(segment[1] + 1))
-            expanded.push(new MultiRoute(pathFinal, true))
+            const pathFinal = this.path.slice(0, segment[0]).concat(firstPart.path).concat(this.path.slice(segment[1] + 1))
+            expanded.push(new MultiRoute(pathFinal, false)) // todo mb crash
         }
 
         console.log(expanded)
@@ -272,7 +280,7 @@ interface YAPIPedestrianRoute {
     properties: IDataManager;
 }
 
-type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit.Route | YAPIPedestrianRoute
+type YAPIRoute = ymaps.multiRouter.driving.Route | ymaps.multiRouter.masstransit.Route
 
 type SegmentModel =
     ymaps.multiRouter.masstransit.TransferSegmentModel
@@ -404,7 +412,7 @@ async function YAPIRouteToMultiRoutePublicTransport(route: ymaps.multiRouter.mas
             // @ts-ignore
             text: segment.properties.get("text", ""),
         }, TransportType.publicTransport));
-    return new MultiRoute(routes, false);
+    return new MultiRoute(routes, false, [route]);
 }
 
 async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): Promise<MultiRoute> {
@@ -414,7 +422,7 @@ async function YAPIRouteToMultiDriving(route: ymaps.multiRouter.driving.Route): 
     const bounds = await getBounds(segments, path);
     const routes = segments.map((segment, index) =>
         new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.car));
-    return new MultiRoute(routes, true);
+    return new MultiRoute(routes, true, [route]);
 }
 
 async function getRoutes(waypoints: WayPoint[], params: RequestParams): Promise<PossibleRoutes> {
@@ -461,7 +469,7 @@ function getYAMultiRoutes(waypoints: WayPoint[], params: RequestParams): Promise
 }
 
 
-function getAutoRoute(points: GeoLocation[]): Promise<Route[] | null> {
+function getAutoRoute(points: GeoLocation[]): Promise<MultiRoute | null> {
     // @ts-ignore
     const multiRoute = new ymaps.multiRouter.MultiRoute({
         referencePoints: points,
@@ -470,7 +478,7 @@ function getAutoRoute(points: GeoLocation[]): Promise<Route[] | null> {
             routingMode: TransportType.car
         },
     });
-    return new Promise((resolve: (_: Route[] | null) => void, reject) => {
+    return new Promise((resolve: (_: MultiRoute | null) => void, reject) => {
         multiRoute.model.events.add('requestsuccess', function () {
             let route = multiRoute.getActiveRoute()
             if (!route) {
@@ -478,7 +486,7 @@ function getAutoRoute(points: GeoLocation[]): Promise<Route[] | null> {
                 return;
             }
             YAPIRouteToMultiDriving(route as ymaps.multiRouter.driving.Route).then((value) => {
-                resolve(value.path)
+                resolve(value)
             })
         })
     });
