@@ -26,6 +26,7 @@ class MultiRoute {
         this.distance = 0;
         console.log("New calc");
         for (const routePart of this.path) {
+            console.log(routePart);
             this.price += routePart.price;
             this.duration += routePart.duration;
             this.distance += routePart.distance;
