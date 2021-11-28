@@ -39,8 +39,6 @@ class MultiRoute {
             .reduce(((previousValue, currentValue) => previousValue + currentValue));
     }
     async expandSpecialPoints() {
-        if (this.isCar)
-            return [];
         let special = [];
         for (const specialPoint of specialPoints) {
             let fromStart = await getAutoRoute([this.path[0].startPoint.coordinates, specialPoint]);
@@ -72,9 +70,9 @@ class MultiRoute {
         return special;
     }
     async expandWays() {
-        if (this.isCar)
-            return [];
         let expanded = await this.expandSpecialPoints();
+        if (this.isCar)
+            return expanded;
         // let expanded = []
         let segmentPair = [0, 0];
         let segments = [];
@@ -179,9 +177,9 @@ class PossibleRoutes {
         }, 0);
         allRoutes = allRoutes.sort((a, b) => {
             let res = 0;
-            res += (a.path.length - b.path.length) * 0.2 / maxPath;
-            res += (a.price - b.price) * 0.65 / maxPrice;
-            res += (a.duration - b.duration) * 0.5 / maxTime;
+            res += (a.path.length - b.path.length) * 0.05 / maxPath;
+            res += (a.price - b.price) * 0.85 / maxPrice;
+            res += (a.duration - b.duration) * 0.3 / maxTime;
             return res;
         });
         this.others = allRoutes;
@@ -196,8 +194,6 @@ const specialPoints = [
     [55.545684, 94.702848], // Саянская
 ];
 function simplifyMultiRoute(mRoute) {
-    if (!mRoute.isCar)
-        return mRoute; // TOdo
     const paths = mRoute.path;
     if (paths.length == 0)
         return mRoute;
@@ -346,11 +342,14 @@ function getYAMultiRoutes(waypoints, params) {
             referencePoints: waypoints.map(value => value.name),
             params: {
                 results: 1,
-                routingMode: value
+                routingMode: value,
+                // @ts-ignore
+                activeRouteAutoSelection: true
             },
         });
         return new Promise((resolve, reject) => {
             multiRoute.model.events.add('requestsuccess', function () {
+                console.log("API Received", multiRoute, multiRoute.getRoutes());
                 resolve(multiRoute.getActiveRoute());
             });
         });

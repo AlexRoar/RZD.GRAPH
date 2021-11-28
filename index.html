@@ -28,6 +28,7 @@
         const busIcon = "<i class=\"fas fa-bus\"></i>"
         const pedestrianIcon = "<i class=\"fas fa-walking\"></i>"
         const chevron = "<i class=\"fas fa-chevron-right\"></i>"
+        const loader = "<div style='text-align: center; margin: auto; width: 100%'><embed style='margin: auto' src='loaders/svg-loaders/spinning-circles.svg'></div>"
 
         const resultWrapTemplate = "<div class=\"results-wrap-small\">\n" +
             "                                <div class=\"row\">\n" +
@@ -172,6 +173,7 @@
         }
 
         async function calculateRoute() {
+            $('#all-quick-results').html(loader)
             if (!activated) {
                 $("#search-container").animate({'marginTop': '20px'}, 400);
                 $("#container-result").slideToggle()
@@ -184,7 +186,6 @@
                 exclusions: new Set([]),
                 datetime: new Date()
             })
-
             activeRoute.build().then(() => {
                 console.log(activeRoute)
                 $('#all-quick-results').html('')
@@ -208,6 +209,15 @@
                         "Самый дешевый",
                         "activeRoute.cheap")
 
+                res += "<hr>"
+
+                for (const otherRoute in activeRoute.others) {
+                    res += quickRouteInfo(activeRoute.others[otherRoute],
+                        "other-tab",
+                        "Маршрут № {0}".format(otherRoute),
+                        "activeRoute.others[{0}]".format(otherRoute))
+                }
+
                 $('#all-quick-results').html(res)
 
                 activateRoute(activeRoute.best, '.optimal-tab')
@@ -218,11 +228,19 @@
     <!-- CSS only -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
-    <link rel="stylesheet" type="text/css" href="assets/css/main.css">
+    <link rel="stylesheet" type="text/css" href="assets/css/main.css"  >
+    <link rel="stylesheet" type="text/css" href="fonts/stylesheet.css" >
     <!-- JavaScript Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
             crossorigin="anonymous"></script>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
 </head>
 <body>
 <div class="container">
@@ -284,12 +302,8 @@
                         <div id="all-quick-results" class="results-wrap">
                         </div>
                         <div id="price-better" class="results-wrap fast-number">
-                            <p><span class="accent">430</span> рублей</p>
-                            <p>Экономия за поездку</p>
                         </div>
                         <div id="time-better" class="results-wrap fast-number">
-                            <p><span class="accent">38</span> минут</p>
-                            <p>Быстрее, чем только авто</p>
                         </div>
                     </div>
                 </div>

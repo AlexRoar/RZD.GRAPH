@@ -1,7 +1,7 @@
 html, body {
     margin: 0;
     padding: 0;
-    font-family: Montserrat, serif;
+    font-family: Montserrat, sans-serif;
 }
 
 body {
@@ -12,7 +12,7 @@ body {
 }
 
 header p {
-    font-family: Montserrat, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: 600;
     font-size: 48px;
@@ -233,7 +233,7 @@ input:focus-visible, input:focus {
 }
 
 .optimal-tab .tabbed-cell p {
-    font-family: SF Pro Text, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 14px;
@@ -248,7 +248,7 @@ input:focus-visible, input:focus {
 }
 
 .cheap-tab .tabbed-cell p {
-    font-family: SF Pro Text, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 14px;
@@ -268,7 +268,7 @@ input:focus-visible, input:focus {
 }
 
 .fast-tab {
-    font-family: SF Pro Text, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 14px;
@@ -281,7 +281,7 @@ input:focus-visible, input:focus {
 }
 
 .waypoint-name {
-    font-family: Montserrat, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 14px;
@@ -293,7 +293,7 @@ input:focus-visible, input:focus {
 }
 
 .waypoint-timing {
-    font-family: Montserrat, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 13px;
@@ -312,7 +312,7 @@ input:focus-visible, input:focus {
 .waypoint-info p {
     margin: 0;
     padding: 0;
-    font-family: Montserrat, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 14px;
@@ -325,7 +325,7 @@ p.waypoint-way-info {
     padding-top: 5px;
     padding-bottom: 5px;
 
-    font-family: Montserrat, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 13px;
@@ -375,7 +375,7 @@ div.results-wrap-map {
 }
 
 .quick-info {
-    font-family: SF Pro Text, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 14px;
@@ -395,7 +395,7 @@ div.results-wrap-map {
 }
 
 .fast-number p:first-child {
-    font-family: Montserrat, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 24px;
@@ -407,7 +407,7 @@ div.results-wrap-map {
 }
 
 .fast-number p:last-child {
-    font-family: Montserrat, serif;
+    font-family: Montserrat, sans-serif;
     font-style: normal;
     font-weight: normal;
     font-size: 14px;
@@ -432,4 +432,9 @@ div.results-wrap-map {
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.2);
     transition: box-shadow 0.3s ease-in-out;
     cursor: pointer;
+}
+
+#all-quick-results {
+    height: 375px;
+    overflow-y: scroll;
 }
