@@ -221,7 +221,7 @@
                 for (const otherRoute in activeRoute.others) {
                     res += quickRouteInfo(activeRoute.others[otherRoute],
                         "other-tab",
-                        "Маршрут № {0}".format(otherRoute + 1),
+                        "Маршрут № {0}".format(parseInt(otherRoute) + 1),
                         "activeRoute.others[{0}]".format(otherRoute))
                 }
 

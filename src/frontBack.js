@@ -89,35 +89,42 @@ class MultiRoute {
     }
     async expandWays() {
         let expanded = await this.expandSpecialPoints();
-        if (this.isCar)
-            return expanded;
+        // if (this.isCar)
+        return expanded;
         // let expanded = []
-        let segmentPair = [0, 0];
+        let segmentPair = [-1, 0];
         let segments = [];
         for (let i = 0; i < this.path.length; i++) {
             // @ts-ignore
-            if (this.path[i].info.type === "walk" ||
-                // @ts-ignore
+            if (this.path[i].info.type === "walk" || this.path[i].type === TransportType.car ||
+                ( // @ts-ignore
                 this.path[i].info.transports && this.path[i].info.transports.length > 0 &&
                     this.path[i].type === TransportType.publicTransport &&
                     // @ts-ignore
-                    this.path[i].info.transports[0].type === "bus") {
+                    (this.path[i].info.transports[0].type === "bus" || this.path[i].info.transports[0].type === "walk"))) {
+                if (segmentPair[0] == -1) {
+                    segmentPair = [i, i];
+                }
                 segmentPair[1] += 1;
+                // segments.push(segmentPair)
             }
             else {
                 segments.push(segmentPair);
                 segmentPair = [i, i];
             }
         }
-        console.log(segments, this);
+        segments.push(segmentPair);
+        console.log("Segments", segments, this);
         for (const segment of segments) {
+            if (segment[0] == segment[1])
+                continue;
             let firstPart = await getAutoRoute([
                 this.path[segment[0]].startPoint.coordinates,
-                this.path[segment[1]].endPoint.coordinates
+                this.path[segment[1] - 1].endPoint.coordinates
             ]);
+            console.log("Tried segment", firstPart);
             if (firstPart === null)
                 continue;
-            console.log(firstPart);
             const pathFinal = this.path.slice(0, segment[0]).concat(firstPart.path).concat(this.path.slice(segment[1] + 1));
             expanded.push(new MultiRoute(pathFinal, false)); // todo mb crash
         }
@@ -262,6 +269,9 @@ function simplifyMultiRoute(mRoute) {
     if (paths.length == 0)
         return mRoute;
     let newPath = [];
+    if (paths[0].type !== TransportType.car) {
+        newPath.push(paths[0]);
+    }
     let isPrevCar = paths[0].type === TransportType.car;
     let prev = paths[0];
     for (let i = 1; i < paths.length; i++) {
