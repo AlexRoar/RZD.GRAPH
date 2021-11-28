@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+let DATE = new Date();
 var TransportType;
 (function (TransportType) {
     TransportType["publicTransport"] = "masstransit";
@@ -7,13 +8,15 @@ var TransportType;
     TransportType["pedestrian"] = "pedestrian";
 })(TransportType || (TransportType = {}));
 class MultiRoute {
-    constructor(path) {
+    constructor(path, isCar = false) {
         this.duration = 0;
         this.distance = 0;
         this.price = 0;
         this.hiddenPrice = 0;
+        this.isCar = false;
         this.path = [];
         this.path = path;
+        this.isCar = isCar;
         this.calcParameters();
     }
     calcParameters() {
@@ -23,7 +26,6 @@ class MultiRoute {
         this.distance = 0;
         console.log("New calc");
         for (const routePart of this.path) {
-            console.log(routePart);
             this.price += routePart.price;
             this.duration += routePart.duration;
             this.distance += routePart.distance;
@@ -36,35 +38,73 @@ class MultiRoute {
             .reduce(((previousValue, currentValue) => previousValue + currentValue));
     }
     async expandSpecialPoints() {
+        if (this.isCar)
+            return [];
         let special = [];
         for (const specialPoint of specialPoints) {
-            for (let i = 0; i < this.path.length; i++) {
-                for (let j = i; j < this.path.length; j++) {
-                    let firstPart = await getAutoRoute([
-                        this.path[i].startPoint.coordinates,
-                        specialPoint,
-                        this.path[j].endPoint.coordinates
-                    ]);
-                    if (firstPart === null)
+            let fromStart = await getAutoRoute([this.path[0].startPoint.coordinates, specialPoint]);
+            if (fromStart !== null) {
+                let fromSpecial = await getRoutes([{ name: await getAddress(specialPoint) }, this.path[this.path.length - 1].endPoint], {
+                    datetime: DATE,
+                    exclusions: new Set()
+                });
+                for (const partial of fromSpecial.others) {
+                    if (!partial)
                         continue;
-                    const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1));
-                    special.push(new MultiRoute(pathFinal));
+                    special.push(new MultiRoute(fromStart.concat(partial.path)));
+                }
+            }
+            let toEnd = await getAutoRoute([specialPoint, this.path[this.path.length - 1].endPoint.coordinates]);
+            if (toEnd !== null) {
+                let toSpecial = await getRoutes([this.path[this.path.length - 1].endPoint, { name: await getAddress(specialPoint) }], {
+                    datetime: DATE,
+                    exclusions: new Set()
+                });
+                for (const partial of toSpecial.others) {
+                    if (!partial)
+                        continue;
+                    special.push(new MultiRoute(partial.path.concat(toEnd)));
                 }
             }
         }
+        console.log("Special", special);
         return special;
     }
     async expandWays() {
+        if (this.isCar)
+            return [];
         let expanded = await this.expandSpecialPoints();
-        // for (let i = 0; i < this.path.length; i++) {
-        //     for (let j = i; j < this.path.length; j++) {
-        //         let firstPart = await getAutoRoute([this.path[i].startPoint.coordinates, this.path[j].endPoint.coordinates])
-        //         if (firstPart === null)
-        //             continue
-        //         const pathFinal = this.path.slice(0, i).concat(firstPart).concat(this.path.slice(j + 1))
-        //         expanded.push(new MultiRoute(pathFinal))
-        //     }
-        // }
+        // let expanded = []
+        let segmentPair = [0, 0];
+        let segments = [];
+        for (let i = 0; i < this.path.length; i++) {
+            // @ts-ignore
+            if (this.path[i].info.type === "walk" ||
+                // @ts-ignore
+                this.path[i].info.transports && this.path[i].info.transports.length > 0 &&
+                    this.path[i].type === TransportType.publicTransport &&
+                    // @ts-ignore
+                    this.path[i].info.transports[0].type === "bus") {
+                segmentPair[1] += 1;
+            }
+            else {
+                segments.push(segmentPair);
+                segmentPair = [i, i];
+            }
+        }
+        console.log(segments, this);
+        for (const segment of segments) {
+            let firstPart = await getAutoRoute([
+                this.path[segment[0]].startPoint.coordinates,
+                this.path[segment[1]].endPoint.coordinates
+            ]);
+            if (firstPart === null)
+                continue;
+            console.log(firstPart);
+            const pathFinal = this.path.slice(0, segment[0]).concat(firstPart).concat(this.path.slice(segment[1] + 1));
+            expanded.push(new MultiRoute(pathFinal, true));
+        }
+        console.log(expanded);
         return expanded;
     }
 }
@@ -139,7 +179,7 @@ class PossibleRoutes {
         allRoutes = allRoutes.sort((a, b) => {
             let res = 0;
             res += (a.path.length - b.path.length) * 0.2 / maxPath;
-            res += (a.price - b.price) * 0.8 / maxPrice;
+            res += (a.price - b.price) * 0.65 / maxPrice;
             res += (a.duration - b.duration) * 0.5 / maxTime;
             return res;
         });
@@ -154,6 +194,39 @@ const specialPoints = [
     [55.805913, 94.329253],
     [55.545684, 94.702848], // Саянская
 ];
+function simplifyMultiRoute(mRoute) {
+    if (!mRoute.isCar)
+        return mRoute; // TOdo
+    const paths = mRoute.path;
+    if (paths.length == 0)
+        return mRoute;
+    let newPath = [];
+    let isPrevCar = paths[0].type === TransportType.car;
+    let prev = paths[0];
+    for (let i = 1; i < paths.length; i++) {
+        if (paths[i].type !== TransportType.car) {
+            if (isPrevCar) {
+                newPath.push(prev);
+            }
+            prev = paths[i];
+            isPrevCar = false;
+            newPath.push(paths[i]);
+            continue;
+        }
+        if (isPrevCar) {
+            prev = new Route(paths[i].duration + prev.duration, paths[i].distance + prev.distance, prev.startPoint, paths[i].endPoint, {}, TransportType.car);
+        }
+        else {
+            isPrevCar = true;
+            prev = paths[i];
+        }
+    }
+    if (isPrevCar) {
+        newPath.push(prev);
+    }
+    mRoute.path = newPath;
+    return mRoute;
+}
 function getDistance(segment) {
     // @ts-ignore
     return segment.properties.get('distance', {
@@ -186,13 +259,26 @@ async function getBounds(segments, path) {
     for (const segment of segments.slice(1)) {
         // @ts-ignore
         const cur = coords[segment.properties.get("lodIndex", coords.length - 1)];
-        result.push([{
-                coordinates: prev.map(it => it.valueOf()),
-                name: await getAddress(prev.map(it => it.valueOf()))
-            }, {
-                coordinates: cur.map(it => it.valueOf()),
-                name: await getAddress(cur.map(it => it.valueOf()))
-            }]);
+        if (segment.properties.get("type", "driving") === "driving") {
+            result.push([{
+                    coordinates: prev.map(it => it.valueOf()),
+                    // @ts-ignore
+                    name: segment.properties.get("text", "")
+                }, {
+                    coordinates: cur.map(it => it.valueOf()),
+                    // @ts-ignore
+                    name: segment.properties.get("text", "")
+                }]);
+        }
+        else {
+            result.push([{
+                    coordinates: prev.map(it => it.valueOf()),
+                    name: await getAddress(prev.map(it => it.valueOf()))
+                }, {
+                    coordinates: cur.map(it => it.valueOf()),
+                    name: await getAddress(cur.map(it => it.valueOf()))
+                }]);
+        }
         prev = cur;
     }
     const last = coords[coords.length - 1];
@@ -209,22 +295,23 @@ async function YAPIRouteToMultiRoutePublicTransport(route) {
     const bounds = await getBounds(segments, path);
     const routes = segments.map((segment, index) => new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {
         // @ts-ignore
+        type: segment.properties.get("type", "transport"),
+        // @ts-ignore
         transports: segment.properties.get("transports", []).map((it) => {
             return { name: it.name, type: it.type };
         }),
         // @ts-ignore
         text: segment.properties.get("text", ""),
     }, TransportType.publicTransport));
-    return new MultiRoute(routes);
+    return new MultiRoute(routes, false);
 }
 async function YAPIRouteToMultiDriving(route) {
-    console.log(route);
     let model = route.model;
     const path = model.getPaths()[0];
     const segments = path.getSegments();
     const bounds = await getBounds(segments, path);
     const routes = segments.map((segment, index) => new Route(getDuration(segment), getDistance(segment), bounds[index][0], bounds[index][1], {}, TransportType.car));
-    return new MultiRoute(routes);
+    return new MultiRoute(routes, true);
 }
 async function getRoutes(waypoints, params) {
     let YaRoutes = await getYAMultiRoutes(waypoints, params);
@@ -253,8 +340,6 @@ function getYAMultiRoutes(waypoints, params) {
     return Promise.all([TransportType.car, TransportType.publicTransport]
         .filter(value => !params.exclusions.has(value))
         .map((value) => {
-        console.log(value);
-        console.log(waypoints.map(value => value.name));
         // @ts-ignore
         const multiRoute = new ymaps.multiRouter.MultiRoute({
             referencePoints: waypoints.map(value => value.name),
@@ -377,5 +462,7 @@ ymaps.ready(() => {
             }, TransportType.publicTransport)
         ])
     ]);
-    mockData.build().then(r => { console.log("Builded mock"); });
+    mockData.build().then(r => {
+        console.log("Builded mock");
+    });
 });

@@ -75,6 +75,7 @@
     <script src="src/frontBack.js"></script>
     <script>
         function activateRoute(route, tab) {
+            route = simplifyMultiRoute(route)
             $(".tabbed-big").removeClass("result-tab-selected")
 
             if (activeRoute.car) {
@@ -117,19 +118,19 @@
                 switch (routeElem.type) {
                     case TransportType.car:
                         type = "Автомобиль"
-                        description = "{0} километров".format(routeElem.distance)
+                        description = "{0} километров".format(Math.round(routeElem.distance))
                         break;
                     case TransportType.publicTransport:
                         type = "Общественный"
-                        description = routeElem.info.description
-                        break;
-                    case TransportType.pedestrian:
-                        type = "Пешеходный"
-                        description = "{0} километров".format(routeElem.distance)
+                        description = routeElem.info.text
+                        if (routeElem.info.type === "walk") {
+                            type = "Пешеходный"
+                            description = "{0} километров".format(Math.round(routeElem.distance))
+                        }
                         break;
                 }
                 pathDetails += resultWrapTemplate.format(
-                    type, routeElem.duration, routeElem.startPoint.name,
+                    type,  Math.round(routeElem.duration), routeElem.startPoint.name,
                     description,
                     routeElem.endPoint.name
                 )
@@ -142,6 +143,7 @@
 
         function quickRouteInfo(route, className, name, objectName) {
             let iconsLine = ""
+            route = simplifyMultiRoute(route)
 
             for (const segment in route.path) {
                 switch (route.path[segment].type) {
@@ -162,8 +164,8 @@
             return quickInfoTemplate.format(
                 className,
                 name,
-                "<span class='accent'>{0}</span> минут".format(route.duration),
-                "<span class='accent'>{0}</span> км".format(route.distance),
+                "<span class='accent'>{0}</span> минут".format(Math.round(route.duration)),
+                "<span class='accent'>{0}</span> км".format(Math.round(route.distance)),
                 "<span class='accent'>{0}</span> рублей".format(Math.round(route.price)),
                 iconsLine,
                 objectName)
